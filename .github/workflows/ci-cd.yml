@@ -9,6 +9,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: user-auth-service
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -25,6 +28,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: SonarSource/sonarcloud-github-action@master
+        with:
+          projectBaseDir: user-auth-service
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN:  ${{ secrets.SONAR_TOKEN }}
@@ -40,5 +45,6 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - uses: docker/build-push-action@v4
         with:
+          context: user-auth-service
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/user-auth-service:latest
