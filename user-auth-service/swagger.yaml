@@ -1,0 +1,287 @@
+openapi: 3.0.0
+info:
+  title: User Auth Service API
+  description: Authentication and user management service for Online Learning Platform
+  version: 1.0.0
+  contact:
+    name: Chirathi Somadasa
+
+servers:
+  - url: http://localhost:3001
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          example: Chirathi Somadasa
+        email:
+          type: string
+          format: email
+          example: chirathi@gmail.com
+        password:
+          type: string
+          minLength: 4
+          example: pass1234
+        role:
+          type: string
+          enum: [student, instructor, admin]
+          default: student
+          example: student
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: chirathi@gmail.com
+        password:
+          type: string
+          example: pass1234
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 69a91dd92f64596d389b0cef
+        name:
+          type: string
+          example: Chirathi Somadasa
+        email:
+          type: string
+          example: chirathi@gmail.com
+        role:
+          type: string
+          example: student
+
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: User registered successfully
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    ValidateResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          example: true
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              example: 69a91dd92f64596d389b0cef
+            email:
+              type: string
+              example: chirathi@gmail.com
+            role:
+              type: string
+              example: student
+            name:
+              type: string
+              example: Chirathi Somadasa
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Server error
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check if the service is running
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: user-auth-service
+
+  /api/auth/register:
+    post:
+      summary: Register a new user
+      description: Creates a new user account and returns a JWT token. Also sends a welcome email via Notification Service.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Email already registered
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/login:
+    post:
+      summary: Login user
+      description: Authenticates user with email and password and returns a JWT token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Invalid email or password
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/validate:
+    get:
+      summary: Validate JWT token
+      description: Validates a JWT token. Called by Enrollment Service and Course Catalog Service to verify user authentication.
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateResponse'
+        '401':
+          description: Invalid or missing token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Invalid or expired token
+
+  /api/auth/profile:
+    get:
+      summary: Get user profile
+      description: Returns the logged-in user's profile. Requires valid JWT token.
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: 69a91dd92f64596d389b0cef
+                  name:
+                    type: string
+                    example: Chirathi Somadasa
+                  email:
+                    type: string
+                    example: chirathi@gmail.com
+                  role:
+                    type: string
+                    example: student
+                  createdAt:
+                    type: string
+                    example: 2026-03-05T06:08:25.710Z
+        '401':
+          description: No token provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: No token provided
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: User not found
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
