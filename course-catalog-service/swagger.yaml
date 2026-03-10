@@ -1,0 +1,245 @@
+openapi: 3.0.0
+info:
+  title: Course Catalog Service API
+  description: Manages all course data for the Online Learning Platform. Provides course information to the Enrollment Service.
+  version: 1.0.0
+  contact:
+    name: Chirathi Somadasa
+
+servers:
+  - url: http://localhost:3002
+    description: Local development
+  - url: http://localhost:3000
+    description: Via API Gateway
+
+tags:
+  - name: Courses
+    description: Course CRUD operations
+  - name: Health
+    description: Service health check
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: course-catalog-service
+
+  /api/courses:
+    get:
+      tags: [Courses]
+      summary: List all active courses
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+          description: Filter by category
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search by title
+      responses:
+        '200':
+          description: Array of courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Course'
+
+    post:
+      tags: [Courses]
+      summary: Create a new course (triggers notification to Student 4)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseInput'
+            example:
+              title: "Node.js Fundamentals"
+              description: "Learn Node.js and Express from scratch"
+              instructor: "Dr. Silva"
+              instructorId: "64f1a2b3c4d5e6f7a8b9c0d1"
+              category: "Programming"
+              duration: "8 weeks"
+              totalSeats: 30
+      responses:
+        '201':
+          description: Course created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  course:
+                    $ref: '#/components/schemas/Course'
+        '401':
+          description: Unauthorized
+
+  /api/courses/{id}:
+    get:
+      tags: [Courses]
+      summary: Get course by ID (called by Enrollment Service — Student 3)
+      parameters:
+        - $ref: '#/components/parameters/CourseId'
+      responses:
+        '200':
+          description: Course details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '404':
+          description: Course not found
+
+    put:
+      tags: [Courses]
+      summary: Update course details
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CourseId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseInput'
+      responses:
+        '200':
+          description: Course updated
+        '401':
+          description: Unauthorized
+        '404':
+          description: Course not found
+
+    delete:
+      tags: [Courses]
+      summary: Delete a course
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CourseId'
+      responses:
+        '200':
+          description: Course deleted
+        '401':
+          description: Unauthorized
+        '404':
+          description: Course not found
+
+  /api/courses/{id}/seats:
+    put:
+      tags: [Courses]
+      summary: Update enrolled seat count (called internally by Enrollment Service — Student 3)
+      parameters:
+        - $ref: '#/components/parameters/CourseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [increment, decrement]
+              example:
+                action: increment
+      responses:
+        '200':
+          description: Seat count updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  course:
+                    $ref: '#/components/schemas/Course'
+        '400':
+          description: Invalid action
+        '404':
+          description: Course not found
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    CourseId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+      description: MongoDB ObjectId of the course
+
+  schemas:
+    CourseInput:
+      type: object
+      required: [title, description, instructor, category]
+      properties:
+        title:
+          type: string
+          example: Node.js Fundamentals
+        description:
+          type: string
+          example: Learn Node.js and Express from scratch
+        instructor:
+          type: string
+          example: Dr. Silva
+        instructorId:
+          type: string
+          example: 64f1a2b3c4d5e6f7a8b9c0d1
+        category:
+          type: string
+          example: Programming
+        duration:
+          type: string
+          example: 8 weeks
+        totalSeats:
+          type: integer
+          example: 30
+        status:
+          type: string
+          enum: [active, inactive]
+          default: active
+
+    Course:
+      allOf:
+        - $ref: '#/components/schemas/CourseInput'
+        - type: object
+          properties:
+            _id:
+              type: string
+            enrolledCount:
+              type: integer
+              default: 0
+            createdAt:
+              type: string
+              format: date-time
