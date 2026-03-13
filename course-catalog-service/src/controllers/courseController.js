@@ -1,8 +1,17 @@
 const Course = require('../models/Course');
 const axios = require('axios');
+const jwt = require('jsonwebtoken');
 
 const NOTIFY_URL =
   process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004';
+
+
+const serviceToken = () =>
+  jwt.sign(
+    { id: 'course-catalog-service', role: 'service', name: 'Course Catalog' },
+    process.env.JWT_SECRET,
+    { expiresIn: '1m' }
+  );
 
 // GET /api/courses — list all active courses
 exports.getAllCourses = async (req, res) => {
@@ -37,17 +46,21 @@ exports.createCourse = async (req, res) => {
   try {
     const course = await Course.create(req.body);
 
-    // Notify all users about new course — Student 4
     try {
-      await axios.post(`${NOTIFY_URL}/api/notifications/send`, {
-        type: 'new_course',
-        courseTitle: course.title,
-        instructor: course.instructor,
-        message: `New course available: "${course.title}" by ${course.instructor}`,
-      });
+      await axios.post(
+        `${NOTIFY_URL}/api/notifications/send`,
+        {
+          type: 'new_course',
+          courseTitle: course.title,
+          instructor: course.instructor,
+          message: `New course available: "${course.title}" by ${course.instructor}`,
+        },
+        {
+          headers: { Authorization: `Bearer ${serviceToken()}` }  // ← add this
+        }
+      );
     } catch (e) {
       console.warn('Notification service unavailable:', e.message);
-      // Never fail course creation because of notification failure
     }
 
     res.status(201).json({ message: 'Course created successfully', course });
@@ -88,7 +101,7 @@ exports.updateSeats = async (req, res) => {
         : { $inc: { enrolledCount: -1 } };
 
     const course = await Course.findByIdAndUpdate(req.params.id, update, {
-      new: true,
+     returnDocument: 'after',
     });
     if (!course) return res.status(404).json({ message: 'Course not found' });
     res.json({ message: 'Seat count updated', course });
