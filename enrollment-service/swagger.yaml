@@ -1,0 +1,213 @@
+openapi: 3.0.0
+info:
+  title: Enrollment Service API
+  description: Service for managing student course enrollments and progress tracking
+  version: 1.0.0
+  contact:
+    name: Chirathi Somadasa
+
+servers:
+  - url: http://localhost:3003
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    EnrollmentRequest:
+      type: object
+      required:
+        - courseId
+      properties:
+        courseId:
+          type: string
+          example: 64f1a2b3c4d5e6f7a8b9c0d1
+
+    Enrollment:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 65e8a2b3c4d5e6f7a8b9c012
+        userId:
+          type: string
+          example: 69a91dd92f64596d389b0cef
+        userName:
+          type: string
+          example: Piumi Udeshika
+        userEmail:
+          type: string
+          example: udeshika@gmail.com
+        courseId:
+          type: string
+          example: 64f1a2b3c4d5e6f7a8b9c0d1
+        courseTitle:
+          type: string
+          example: Node.js Fundamentals
+        instructor:
+          type: string
+          example: Dr. Silva
+        status:
+          type: string
+          enum: [active, cancelled, completed]
+          example: active
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 25
+        enrolledAt:
+          type: string
+          format: date-time
+          example: 2026-03-14T12:00:00.000Z
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Error message detail
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: enrollment-service
+
+  /api/enrollment:
+    post:
+      summary: Create new enrollment
+      description: Enrolls a student in a course. Validates user via Auth Service and updates seat count via Course Service.
+      tags:
+        - Enrollment
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentRequest'
+      responses:
+        '201':
+          description: Enrolled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Enrolled successfully
+                  enrollment:
+                    $ref: '#/components/schemas/Enrollment'
+        '400':
+          description: Course full or already enrolled
+        '401':
+          description: Unauthorized
+
+  /api/enrollment/user/{userId}:
+    get:
+      summary: Get user enrollments
+      tags:
+        - Enrollment
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of enrollments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Enrollment'
+
+  /api/enrollment/{id}:
+    get:
+      summary: Get enrollment by ID
+      tags:
+        - Enrollment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Enrollment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+        '404':
+          description: Enrollment not found
+
+    delete:
+      summary: Cancel enrollment
+      description: Sets status to 'cancelled' and decrements course seats.
+      tags:
+        - Enrollment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Enrollment cancelled
+        '404':
+          description: Not found
+
+  /api/enrollment/{id}/progress:
+    put:
+      summary: Update course progress
+      tags:
+        - Enrollment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                progress:
+                  type: number
+                  example: 50
+      responses:
+        '200':
+          description: Progress updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
