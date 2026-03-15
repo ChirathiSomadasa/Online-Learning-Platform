@@ -146,7 +146,6 @@ const InstructorHome = () => {
 
           {!loading && courses.length === 0 && (
             <div style={styles.empty}>
-              <p style={styles.emptyIcon}>📚</p>
               <p style={styles.emptyText}>No courses yet</p>
               <p style={styles.emptyHint}>Click "Create New Course" to get started</p>
             </div>
@@ -192,12 +191,12 @@ const InstructorHome = () => {
 
             {/* LEFT — illustration panel */}
             <div style={styles.modalLeft}>
+              <p style={styles.illustrationTitle}>Add New Course</p>
               <img
                 src={onlineCourse}
                 alt="Online Course"
                 style={{ width: '320px', marginBottom: '20px', objectFit: 'contain', borderRadius: '12px' }}
               />
-              <p style={styles.illustrationTitle}>Add New Course</p>
               <p style={styles.illustrationSub}>
       Fill in the details to publish{'\n'}a new course for students
     </p>
@@ -369,7 +368,6 @@ const styles = {
   },
   loadingText: { color: '#888', fontSize: '15px' },
   empty:       { textAlign: 'center', padding: '60px 20px' },
-  emptyIcon:   { fontSize: '48px', margin: '0 0 10px' },
   emptyText:   { fontSize: '18px', color: '#2c3e50', fontWeight: '600', marginBottom: '6px' },
   emptyHint:   { fontSize: '14px', color: '#aaa' },
 
@@ -411,16 +409,16 @@ const styles = {
   // Left illustration panel — orange gradient
   modalLeft: {
     width: '270px', flexShrink: 0,
-    background: 'linear-gradient(155deg,  #e6940f 45%, #eead58 60%, #f0cd91 80%)',
+    background: 'linear-gradient(155deg,  #e48c00 45%, #f19823 60%, #f7af32 80%)',
     display: 'flex', flexDirection: 'column',
     alignItems: 'center', justifyContent: 'center',
     padding: '30px 28px 80px', textAlign: 'center',
   },
   illustrationTitle: {
-    fontSize: '24px', fontWeight: '800', color: '#573205', margin: '0 0 8px',
+    fontSize: '26px', fontWeight: '800', color: 'white', margin: '0 0 8px',
   },
   illustrationSub: {
-    fontSize: '16px', fontWeight: '600', color: '#a05a10', lineHeight: '1.65',
+    fontSize: '18px', fontWeight: '400', color: 'white', lineHeight: '1.65',
     margin: 0, whiteSpace: 'pre-line',
   },
 
@@ -493,3 +491,4 @@ const styles = {
 };
 
 export default InstructorHome;
+
