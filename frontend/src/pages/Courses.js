@@ -264,11 +264,11 @@ const Courses = () => {
                 </button>
               )}
             </div>
-            <select className="filter-select" style={styles.select}
+            {/* <select className="filter-select" style={styles.select}
               value={category} onChange={e => setCategory(e.target.value)}>
               <option value="">All Categories</option>
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+            </select> */}
             <span style={styles.resultsCount}>{filtered.length} course{filtered.length !== 1 ? 's' : ''}</span>
           </div>
 
@@ -290,7 +290,7 @@ const Courses = () => {
 
           {error && (
             <div style={styles.errorBox}>
-              <span>⚠️ {error}</span>
+              <span> {error}</span>
               <button style={styles.retryBtn} onClick={fetchCourses}>Retry</button>
             </div>
           )}
