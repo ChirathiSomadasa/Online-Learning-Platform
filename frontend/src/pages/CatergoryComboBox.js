@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 
-// ─── Normalization ────────────────────────────────────────────────────────────
 // "PROGRAMMING", "programming", "programing" → "Programming"
 // "web development", "WEB DEV" → "Web Development"
 export const normalizeCategory = (raw = '') =>
@@ -21,8 +20,6 @@ export const dedupeCategories = (list = []) => {
     return true;
   });
 };
-
-// ─── Fuzzy / partial match scorer ─────────────────────────────────────────────
 // Returns a relevance score >= 0; higher = better match; 0 = no match
 const score = (candidate, query) => {
   if (!query) return 1;                            // empty query → show all
@@ -37,7 +34,6 @@ const score = (candidate, query) => {
   return 30;
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
 
 /**
  * Props:
@@ -96,7 +92,6 @@ const CategoryComboBox = ({
     query.trim().length > 0 &&
     !allCategories.some(c => c.toLowerCase() === query.trim().toLowerCase());
 
-  // ── Handlers ──
   const select = (cat) => {
     const normalized = normalizeCategory(cat);
     setQuery(normalized);
@@ -107,7 +102,7 @@ const CategoryComboBox = ({
 
   const handleInputChange = (e) => {
     setQuery(e.target.value);
-    onChange(e.target.value);   // pass raw; parent will normalize on submit
+    onChange(e.target.value);  
     setOpen(true);
   };
 
@@ -139,7 +134,6 @@ const CategoryComboBox = ({
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* ── Input ── */}
       <div style={{ position: 'relative' }}>
         <input
           ref={inputRef}
@@ -169,7 +163,6 @@ const CategoryComboBox = ({
           role="combobox"
           aria-invalid={!!(error && touched)}
         />
-        {/* Dropdown chevron */}
         <span
           onClick={() => { setOpen(o => !o); inputRef.current?.focus(); }}
           style={{
@@ -183,15 +176,12 @@ const CategoryComboBox = ({
           ▼
         </span>
       </div>
-
-      {/* ── Dropdown ── */}
       {open && (
         <ul
           ref={listRef}
           role="listbox"
           style={dropdownStyle}
         >
-          {/* Existing / preset matches */}
           {suggestions.length > 0 && (
             <>
               {existingFromDB.length > 0 && (
@@ -221,8 +211,6 @@ const CategoryComboBox = ({
                 ))}
             </>
           )}
-
-          {/* "Create new" option */}
           {isNewCategory && (
             <li
               style={{ ...suggestionItemStyle, borderTop: suggestions.length ? '1px solid #f0e0c8' : 'none', color: '#e67e22' }}
@@ -235,8 +223,6 @@ const CategoryComboBox = ({
               </span>
             </li>
           )}
-
-          {/* No results + no new */}
           {suggestions.length === 0 && !isNewCategory && (
             <li style={{ padding: '10px 14px', fontSize: '13px', color: '#bbb', textAlign: 'center' }}>
               No categories found
@@ -245,7 +231,6 @@ const CategoryComboBox = ({
         </ul>
       )}
 
-      {/* ── Error / hint ── */}
       {error && touched && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#e74c3c', fontSize: '12px', marginTop: '5px' }}>
           <ErrorOutlineIcon style={{ fontSize: '13px', flexShrink: 0 }} />
@@ -261,7 +246,6 @@ const CategoryComboBox = ({
   );
 };
 
-// ─── Highlighted match item ───────────────────────────────────────────────────
 
 const SuggestionItem = ({ cat, query, onSelect, onMouseDown, badge }) => {
   const q = (query || '').trim().toLowerCase();
@@ -304,7 +288,6 @@ const SuggestionItem = ({ cat, query, onSelect, onMouseDown, badge }) => {
   );
 };
 
-// ─── Local styles ─────────────────────────────────────────────────────────────
 
 const dropdownStyle = {
   position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,

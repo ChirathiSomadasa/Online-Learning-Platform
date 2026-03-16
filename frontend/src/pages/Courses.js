@@ -23,9 +23,8 @@ import ChevronLeftIcon   from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon  from '@mui/icons-material/ChevronRight';
 import bannerGirl from '../images/course/course_girl.png';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 
-const CARDS_PER_PAGE = 6; // 2 rows of 3
+const CARDS_PER_PAGE = 6; 
 
 const SORT_OPTIONS = [
   { value: 'popular',  label: 'Most Popular',  icon: 'trending' },
@@ -52,7 +51,6 @@ const CARD_GRADIENTS = [
 const CARD_ICON_BG  = ['rgba(0,180,180,0.15)','rgba(108,99,255,0.15)','rgba(247,151,30,0.15)','rgba(67,184,156,0.15)','rgba(209, 187, 21, 0.15)','rgba(71,118,230,0.15)'];
 const CARD_ACCENT   = ['#00b4b4','#6c63ff','#f7971e','#43b89c','#e4c490','#4776e6'];
 
-// ─── Sort helper ──────────────────────────────────────────────────────────────
 
 const sortCourses = (list, key) => {
   const copy = [...list];
@@ -69,7 +67,6 @@ const sortCourses = (list, key) => {
   }
 };
 
-// ─── CategoryPicker sub-component ─────────────────────────────────────────────
 // A searchable popover that handles 100s of categories gracefully
 
 const CategoryPicker = ({ categories, value, onChange }) => {
@@ -136,8 +133,6 @@ const CategoryPicker = ({ categories, value, onChange }) => {
               }}
             />
           </div>
-
-          {/* "All" option */}
           <div style={{ maxHeight: '260px', overflowY: 'auto', padding: '6px 0' }}>
             <button
               onClick={() => { onChange(''); setQuery(''); setOpen(false); }}
@@ -179,7 +174,6 @@ const CategoryPicker = ({ categories, value, onChange }) => {
             ))}
           </div>
 
-          {/* Footer count */}
           <div style={{ padding: '8px 16px', borderTop: '1px solid #f0f0f0', fontSize: '11px', color: '#bbb' }}>
             {filtered.length} of {categories.length} categories
           </div>
@@ -188,8 +182,6 @@ const CategoryPicker = ({ categories, value, onChange }) => {
     </div>
   );
 };
-
-// ─── Pagination sub-component ─────────────────────────────────────────────────
 
 const Pagination = ({ page, totalPages, onChange }) => {
   if (totalPages <= 1) return null;
@@ -260,7 +252,6 @@ const pgBtn = (disabled) => ({
   fontFamily: "'DM Sans', sans-serif",
 });
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 const Courses = () => {
   const { user } = useAuth();
@@ -282,7 +273,6 @@ const Courses = () => {
 
   const exploreRef = useRef(null);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchCourses(); }, []);
 
   const fetchCourses = async () => {
@@ -297,7 +287,6 @@ const Courses = () => {
     } finally { setLoading(false); }
   };
 
-  // ── Derived: filter + sort + paginate ──
   const filtered = React.useMemo(() => {
     let result = courses;
     if (search)   result = result.filter(c =>
@@ -313,7 +302,6 @@ const Courses = () => {
   const safePage    = Math.min(page, totalPages);
   const paginated   = filtered.slice((safePage - 1) * CARDS_PER_PAGE, safePage * CARDS_PER_PAGE);
 
-  // Reset to page 1 whenever filters change
   useEffect(() => { setPage(1); }, [search, category, sortBy]);
 
   const handlePageChange = useCallback((p) => {
@@ -321,7 +309,6 @@ const Courses = () => {
     exploreRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
-  // ── Modal ──
   const openDetail = async (id) => {
     setModalOpen(true); setModalLoading(true);
     try {
@@ -334,14 +321,12 @@ const Courses = () => {
   const closeModal = () => { setModalOpen(false); setSelected(null); };
   const handleEnroll = () => { navigate(`/enroll/${selected._id}`); };
 
-  // ── Seat helpers ──
   const seatPct        = (c)   => c.totalSeats > 0 ? Math.min(100, (c.enrolledCount / c.totalSeats) * 100) : 0;
   const seatColor      = (pct) => pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00b4b4';
   const availLabel     = (pct) => pct >= 90 ? 'Almost Full' : pct >= 70 ? 'Filling Up' : 'Open';
   const availBg        = (pct) => pct >= 90 ? '#fdecea' : pct >= 70 ? '#fff8e1' : '#e8faf9';
   const availFg        = (pct) => pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00a89d';
 
-  // ── Instructor map (for section) ──
   const instructorMap  = courses.reduce((acc, c) => {
     if (!c.instructor) return acc;
     if (!acc[c.instructor]) acc[c.instructor] = [];
@@ -354,7 +339,6 @@ const Courses = () => {
   const modalGrad      = CARD_GRADIENTS[modalCardIdx % CARD_GRADIENTS.length] || CARD_GRADIENTS[0];
   const modalAccent    = CARD_ACCENT[modalCardIdx % CARD_ACCENT.length]       || CARD_ACCENT[0];
 
-  // ── Popular course (top enrolled) ──
   const topCourse = courses.length > 0
     ? [...courses].sort((a, b) => (b.enrolledCount || 0) - (a.enrolledCount || 0))[0]
     : null;
@@ -404,7 +388,6 @@ const Courses = () => {
 
       <div style={{ fontFamily: "'DM Sans', sans-serif", backgroundColor: '#f3f6f9', minHeight: '100vh' }}>
 
-        {/* ── HERO ── */}
         <section style={styles.hero}>
           <div style={styles.blob1} /><div style={styles.blob2} />
           <div style={styles.heroInner}>
@@ -415,7 +398,6 @@ const Courses = () => {
                 Discover expert-led courses tailored to your goals. Learn at your own pace
                 and unlock new skills from anywhere in the world.
               </p>
-              {/* Quick stats pill */}
               {!loading && courses.length > 0 && (
                 <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '24px' }}>
                   {[
@@ -458,8 +440,6 @@ const Courses = () => {
             </div>
           </div>
         </section>
-
-        {/* ── MOST POPULAR SPOTLIGHT ── */}
         {!loading && topCourse && (
           <div style={{ padding: '0 60px', marginTop: '-10px', marginBottom: '0' }}>
             <div style={{
@@ -496,17 +476,14 @@ const Courses = () => {
           </div>
         )}
 
-        {/* ── EXPLORE ── */}
         <div ref={exploreRef} id="explore-section" style={{ padding: '52px 60px' }}>
           <div style={styles.sectionHead}>
             <span style={styles.sectionEyebrow}>Our Courses</span>
             <h2 style={styles.sectionTitle}>Explore Our Courses</h2>
           </div>
 
-          {/* ── Toolbar: search + category + sort ── */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
 
-            {/* Search */}
             <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
               <SearchIcon style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#bbb', fontSize: '20px', pointerEvents: 'none' }} />
               <input
@@ -523,16 +500,13 @@ const Courses = () => {
               )}
             </div>
 
-            {/* Category picker */}
             <CategoryPicker categories={categories} value={category} onChange={setCategory} />
 
-            {/* Results count */}
             <span style={{ color: '#aaa', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>
               {filtered.length} course{filtered.length !== 1 ? 's' : ''}
             </span>
           </div>
 
-          {/* ── Sort bar ── */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '32px', flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', color: '#bbb', fontWeight: '600', marginRight: '4px' }}>SORT BY</span>
             {SORT_OPTIONS.map(opt => (
@@ -578,11 +552,8 @@ const Courses = () => {
               </button>
             </div>
           )}
-
-          {/* ── CARD GRID ── */}
           {!loading && !error && paginated.length > 0 && (
             <>
-              {/* Showing X–Y of Z */}
               <p style={{ fontSize: '12px', color: '#bbb', fontWeight: '600', marginBottom: '18px' }}>
                 Showing {(safePage - 1) * CARDS_PER_PAGE + 1}–{Math.min(safePage * CARDS_PER_PAGE, filtered.length)} of {filtered.length} courses
               </p>
@@ -599,14 +570,13 @@ const Courses = () => {
 
                   return (
                     <div key={course._id} className="ccard" style={{ ...styles.card, position: 'relative' }}>
-                      {/* "Top Pick" ribbon for most popular */}
+              
                       {isTop && (
                         <div style={{ position: 'absolute', top: '12px', left: '-4px', zIndex: 5, backgroundColor: '#ffd700', color: '#4a3800', fontSize: '10px', fontWeight: '800', padding: '3px 10px 3px 8px', borderRadius: '0 6px 6px 0', boxShadow: '2px 2px 8px rgba(0,0,0,0.15)', letterSpacing: '0.05em' }}>
                           TOP PICK
                         </div>
                       )}
 
-                      {/* Banner */}
                       <div style={{ ...styles.cardBanner, background: grad }}>
                         <svg className="ccard-banner-overlay" viewBox="0 0 340 100" preserveAspectRatio="none"
                           style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '100%', opacity: 0.4 }}>
@@ -622,7 +592,6 @@ const Courses = () => {
                         </div>
                       </div>
 
-                      {/* Body */}
                       <div style={styles.cardBody}>
                         <h3 style={styles.courseTitle}>{course.title}</h3>
                         <p style={styles.description}>{course.description}</p>
@@ -630,7 +599,6 @@ const Courses = () => {
                           Click "View Details" for full course info and enrollment options.
                         </div>
 
-                        {/* Popularity indicator */}
                         {(course.enrolledCount || 0) > 0 && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px' }}>
                             <TrendingUpIcon style={{ fontSize: '13px', color: '#f7971e' }} />
@@ -678,13 +646,11 @@ const Courses = () => {
                 })}
               </div>
 
-              {/* ── PAGINATION ── */}
               <Pagination page={safePage} totalPages={totalPages} onChange={handlePageChange} />
             </>
           )}
         </div>
 
-        {/* ── INSTRUCTORS ── */}
         {!loading && instructorList.length > 0 && (
           <section style={{ backgroundColor: '#fff', padding: '64px 60px' }}>
             <div style={styles.sectionHead}>
@@ -720,7 +686,6 @@ const Courses = () => {
           </section>
         )}
 
-        {/* ── FAQ ── */}
         <section id="faq-section" style={{ backgroundColor: '#f3f6f9', padding: '72px 60px' }}>
           <div style={{ display: 'flex', gap: '60px', maxWidth: '1100px', margin: '0 auto', alignItems: 'flex-start' }}>
             <div style={{ width: '280px', flexShrink: 0 }}>
@@ -747,7 +712,6 @@ const Courses = () => {
         </section>
       </div>
 
-      {/* ── DETAIL MODAL ── */}
       {modalOpen && (
         <div style={styles.overlay} onClick={e => { if (e.target === e.currentTarget) closeModal(); }}>
           <div style={styles.modal} className="modal-anim">
@@ -816,7 +780,6 @@ const Courses = () => {
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = {
   hero: { position: 'relative', background: 'linear-gradient(135deg, #f0fafa 0%, #e0f7f6 50%, #ccf0ee 100%)', padding: '70px 60px', overflow: 'hidden', minHeight: '380px' },

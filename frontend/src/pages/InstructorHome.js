@@ -16,7 +16,6 @@ const InstructorHome = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchCourses(); }, []);
 
   const fetchCourses = async () => {
@@ -50,7 +49,6 @@ const InstructorHome = () => {
 
       <div style={styles.page}>
 
-        {/* ── BANNER ── */}
         <section style={styles.banner}>
           <h1 style={styles.bannerTitle}>Instructor Dashboard</h1>
           <p style={styles.bannerSubtitle}>
@@ -59,7 +57,6 @@ const InstructorHome = () => {
           <span style={styles.badge}>Instructor Panel</span>
         </section>
 
-        {/* ── STATS ── */}
         <section style={styles.statsRow}>
           {stats.map((s, i) => (
             <div key={i} style={styles.statCard}>
@@ -72,7 +69,6 @@ const InstructorHome = () => {
           ))}
         </section>
 
-        {/* ── MY COURSES ── */}
         <section style={styles.section}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>My Courses</h2>

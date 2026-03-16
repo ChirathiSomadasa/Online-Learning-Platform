@@ -4,24 +4,23 @@ import { useNavigate } from 'react-router-dom';
 import {
   getAllCourses, createCourse, updateCourse, deleteCourse,
 } from '../services/courseService';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import EditIcon             from '@mui/icons-material/Edit';
-import DeleteOutlineIcon    from '@mui/icons-material/DeleteOutline';
-import CloseIcon            from '@mui/icons-material/Close';
-import GroupIcon            from '@mui/icons-material/Group';
-import CheckCircleIcon      from '@mui/icons-material/CheckCircle';
-import MenuBookIcon         from '@mui/icons-material/MenuBook';
-import EventSeatIcon        from '@mui/icons-material/EventSeat';
-import WarningAmberIcon     from '@mui/icons-material/WarningAmber';
-import TrendingUpIcon       from '@mui/icons-material/TrendingUp';
-import ErrorOutlineIcon     from '@mui/icons-material/ErrorOutline';
-import InfoOutlinedIcon     from '@mui/icons-material/InfoOutlined';
-import onlineCourse from '../images/course/online_course.png';
-import bannerTeacher from '../images/course/course_instructor.png';
+import AddCircleOutlineIcon  from '@mui/icons-material/AddCircleOutline';
+import EditIcon              from '@mui/icons-material/Edit';
+import DeleteOutlineIcon     from '@mui/icons-material/DeleteOutline';
+import CloseIcon             from '@mui/icons-material/Close';
+import GroupIcon             from '@mui/icons-material/Group';
+import CheckCircleIcon       from '@mui/icons-material/CheckCircle';
+import MenuBookIcon          from '@mui/icons-material/MenuBook';
+import EventSeatIcon         from '@mui/icons-material/EventSeat';
+import WarningAmberIcon      from '@mui/icons-material/WarningAmber';
+import TrendingUpIcon        from '@mui/icons-material/TrendingUp';
+import ErrorOutlineIcon      from '@mui/icons-material/ErrorOutline';
+import InfoOutlinedIcon      from '@mui/icons-material/InfoOutlined';
+import ReportProblemIcon     from '@mui/icons-material/ReportProblem';
+import onlineCourse   from '../images/course/online_course.png';
+import bannerTeacher  from '../images/course/course_instructor.png';
 import CategoryComboBox, { normalizeCategory, dedupeCategories } from '../pages/CatergoryComboBox';
 import DurationPicker from '../pages/DurationPicker';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
 
 
 const EMPTY_FORM = {
@@ -29,45 +28,42 @@ const EMPTY_FORM = {
   category: '', duration: '', totalSeats: 30, status: 'active',
 };
 
-// ─── Validation Logic ─────────────────────────────────────────────────────────
 
 const FIELD_RULES = {
   title: [
-    { test: v => v.trim().length > 0,   msg: 'Course Title.' },
-    { test: v => v.trim().length >= 5,  msg: 'Title must be at least 5 characters.' },
+    { test: v => v.trim().length > 0,    msg: 'Course title is required.' },
+    { test: v => v.trim().length >= 5,   msg: 'Title must be at least 5 characters.' },
     { test: v => v.trim().length <= 100, msg: 'Title cannot exceed 100 characters.' },
   ],
   description: [
-    { test: v => v.trim().length > 0,   msg: 'Description.' },
-    { test: v => v.trim().length <= 1000, msg: 'Description cannot exceed 1000 characters.' },
+    { test: v => v.trim().length > 0,    msg: 'Description is required.' },
+    { test: v => v.trim().length <= 1000,msg: 'Description cannot exceed 1000 characters.' },
   ],
   instructor: [
-    { test: v => v.trim().length > 0,  msg: 'Instructor Name.' },
-    { test: v => v.trim().length >= 2, msg: 'Instructor name must be at least 2 characters.' },
-    { test: v => /^[a-zA-Z\s.'-]+$/.test(v.trim()), msg: 'Instructor name can only contain letters, spaces, and basic punctuation.' },
+    { test: v => v.trim().length > 0,    msg: 'Instructor name is required.' },
+    { test: v => v.trim().length >= 2,   msg: 'Instructor name must be at least 2 characters.' },
+    { test: v => /^[a-zA-Z\s.'-]+$/.test(v.trim()), msg: 'Instructor name may only contain letters, spaces, and basic punctuation.' },
   ],
   category: [
-    { test: v => v.trim().length > 0,  msg: 'Category.' },
-    { test: v => v.trim().length >= 2, msg: 'Category must be at least 2 characters.' },
-    { test: v => v.trim().length <= 50, msg: 'Category cannot exceed 50 characters.' },
+    { test: v => v.trim().length > 0,    msg: 'Category is required.' },
+    { test: v => v.trim().length >= 2,   msg: 'Category must be at least 2 characters.' },
+    { test: v => v.trim().length <= 50,  msg: 'Category cannot exceed 50 characters.' },
   ],
   duration: [
-    { test: v => v.trim().length <= 50, msg: 'Duration cannot exceed 50 characters.' },
+    { test: v => v.trim().length <= 50,  msg: 'Duration cannot exceed 50 characters.' },
   ],
   totalSeats: [
-    { test: v => !isNaN(v) && Number(v) > 0,    msg: 'Total seats must be a positive number.' },
-    { test: v => Number(v) >= 1,                 msg: 'Minimum 1 seat is required.' },
-    { test: v => Number(v) <= 1000,              msg: 'Maximum 1000 seats allowed.' },
-    { test: v => Number.isInteger(Number(v)),    msg: 'Seats must be a whole number.' },
+    { test: v => !isNaN(v) && Number(v) > 0,   msg: 'Total seats must be a positive number.' },
+    { test: v => Number(v) >= 1,                msg: 'Minimum 1 seat is required.' },
+    { test: v => Number(v) <= 1000,             msg: 'Maximum 1000 seats allowed.' },
+    { test: v => Number.isInteger(Number(v)),   msg: 'Seats must be a whole number.' },
   ],
 };
 
 const validateField = (name, value) => {
   const rules = FIELD_RULES[name];
   if (!rules) return '';
-  for (const rule of rules) {
-    if (!rule.test(value)) return rule.msg;
-  }
+  for (const rule of rules) { if (!rule.test(value)) return rule.msg; }
   return '';
 };
 
@@ -80,7 +76,6 @@ const validateAll = (form) => {
   return errs;
 };
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
 
 const FieldError = ({ msg }) =>
   msg ? (
@@ -109,7 +104,47 @@ const CharCount = ({ value, max }) => {
   );
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+
+const TOAST_META = {
+  success: { icon: <CheckCircleIcon   style={{ fontSize: '18px', flexShrink: 0 }} />, bg: '#f0faf4', border: '#b7dfc6', text: '#1a6636', bar: '#27ae60' },
+  warning: { icon: <ReportProblemIcon style={{ fontSize: '18px', flexShrink: 0 }} />, bg: '#fffbf0', border: '#f5dfa0', text: '#7a5500', bar: '#f39c12' },
+  error:   { icon: <ErrorOutlineIcon  style={{ fontSize: '18px', flexShrink: 0 }} />, bg: '#fff5f5', border: '#f5c6cb', text: '#9b1c1c', bar: '#e74c3c' },
+  info:    { icon: <InfoOutlinedIcon  style={{ fontSize: '18px', flexShrink: 0 }} />, bg: '#f0f4ff', border: '#bfcffa', text: '#1a3a99', bar: '#3b6fd4' },
+};
+
+const ToastCard = ({ toast, onDismiss }) => {
+  const meta = TOAST_META[toast.type] || TOAST_META.info;
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column',
+      backgroundColor: meta.bg,
+      border: `1px solid ${meta.border}`,
+      borderRadius: '10px',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
+      minWidth: '300px', maxWidth: '380px',
+      overflow: 'hidden',
+      animation: 'toastSlideIn 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards',
+    }}>
+      <div style={{ height: '3px', backgroundColor: `${meta.bar}30` }}>
+        <div style={{ height: '100%', backgroundColor: meta.bar, animation: 'toastProgress 4s linear forwards' }} />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px 14px 14px 16px' }}>
+        <span style={{ color: meta.bar, marginTop: '1px' }}>{meta.icon}</span>
+        <p style={{ margin: 0, fontSize: '13px', color: meta.text, lineHeight: '1.55', flex: 1, fontWeight: '500' }}>
+          {toast.msg}
+        </p>
+        <button
+          onClick={() => onDismiss(toast.id)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: meta.text, opacity: 0.5, padding: '0', display: 'flex', alignItems: 'center', flexShrink: 0, marginTop: '1px' }}
+          aria-label="Dismiss"
+        >
+          <CloseIcon style={{ fontSize: '16px' }} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 
 const MyCourses = () => {
   const { user, token } = useAuth();
@@ -120,17 +155,18 @@ const MyCourses = () => {
   const [error, setError]       = useState('');
   const [toasts, setToasts]     = useState([]);
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm]           = useState(EMPTY_FORM);
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [touched, setTouched]     = useState({});
-  const [saving, setSaving]       = useState(false);
+  const [modalOpen, setModalOpen]             = useState(false);
+  const [editingId, setEditingId]             = useState(null);
+  const [form, setForm]                       = useState(EMPTY_FORM);
+  const [originalForm, setOriginalForm]         = useState(null);   
+  const [fieldErrors, setFieldErrors]         = useState({});
+  const [touched, setTouched]                 = useState({});
+  const [saving, setSaving]                   = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
-  const [deleteId, setDeleteId]   = useState(null);
+  const [deleteId, setDeleteId]         = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting]   = useState(false);
+  const [deleting, setDeleting]         = useState(false);
 
   useEffect(() => {
     if (user && user.role !== 'instructor') navigate('/student-home');
@@ -148,16 +184,19 @@ const MyCourses = () => {
     } finally { setLoading(false); }
   };
 
-  // ── Toast system (stacking) ──
   const pushToast = useCallback((msg, type = 'success') => {
-    const id = Date.now();
+    const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, msg, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4200);
   }, []);
 
-  // ── Modal helpers ──
+  const dismissToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
   const openCreate = () => {
     setEditingId(null);
+    setOriginalForm(null);
     setForm({ ...EMPTY_FORM, instructor: user?.name || '' });
     setFieldErrors({}); setTouched({}); setSubmitAttempted(false);
     setModalOpen(true);
@@ -165,30 +204,36 @@ const MyCourses = () => {
 
   const openEdit = (course) => {
     setEditingId(course._id);
-    setForm({
-      title: course.title || '', description: course.description || '',
-      instructor: course.instructor || '', category: course.category || '',
-      duration: course.duration || '', totalSeats: course.totalSeats || 30,
-      status: course.status || 'active',
-    });
+    const snapshot = {
+      title:       course.title       || '',
+      description: course.description || '',
+      instructor:  course.instructor  || '',
+      category:    course.category    || '',
+      duration:    course.duration    || '',
+      totalSeats:  course.totalSeats  || 30,
+      status:      course.status      || 'active',
+    };
+    setForm(snapshot);
+    setOriginalForm(snapshot);  
     setFieldErrors({}); setTouched({}); setSubmitAttempted(false);
     setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false); setEditingId(null); setForm(EMPTY_FORM);
+    setOriginalForm(null);
     setFieldErrors({}); setTouched({}); setSubmitAttempted(false);
   };
 
   const resetForm = () => {
-    const fresh = editingId ? { ...EMPTY_FORM } : { ...EMPTY_FORM, instructor: user?.name || '' };
+    const fresh = editingId
+      ? { ...EMPTY_FORM }
+      : { ...EMPTY_FORM, instructor: user?.name || '' };
     setForm(fresh); setFieldErrors({}); setTouched({}); setSubmitAttempted(false);
   };
 
-  // ── Field change + live validation ──
   const handleChange = (name, value) => {
-    const updated = { ...form, [name]: value };
-    setForm(updated);
+    setForm(prev => ({ ...prev, [name]: value }));
     if (touched[name] || submitAttempted) {
       setFieldErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
     }
@@ -199,27 +244,35 @@ const MyCourses = () => {
     setFieldErrors(prev => ({ ...prev, [name]: validateField(name, form[name]) }));
   };
 
-  // ── Submit ──
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitAttempted(true);
 
-    // Always normalize category before validation so "PROGRAMMING" and "programming" both pass
     const normalizedForm = { ...form, category: normalizeCategory(form.category) };
     setForm(normalizedForm);
 
     const errs = validateAll(normalizedForm);
     setFieldErrors(errs);
-    // Mark all fields touched so errors show
-    const allTouched = Object.keys(FIELD_RULES).reduce((acc, k) => ({ ...acc, [k]: true }), {});
-    setTouched(allTouched);
+    setTouched(Object.keys(FIELD_RULES).reduce((acc, k) => ({ ...acc, [k]: true }), {}));
 
-    if (Object.keys(errs).length > 0) {
-      pushToast(`Please fill the missing ${Object.keys(errs).length} fields(s) before submitting.`, 'warning');
-      // Scroll to first error
-      const firstErrorField = document.querySelector('[data-field-error]');
-      if (firstErrorField) firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const errCount = Object.keys(errs).length;
+    if (errCount > 0) {
+      pushToast(
+        `${errCount} field${errCount > 1 ? 's require' : ' requires'} attention before saving. Review the highlighted fields below.`,
+        'warning',
+      );
+      const firstErrorEl = document.querySelector('[data-field-error]');
+      if (firstErrorEl) firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
+    }
+
+    if (editingId && originalForm) {
+      const fields = Object.keys(EMPTY_FORM);
+      const isDirty = fields.some(k => String(normalizedForm[k] ?? '').trim() !== String(originalForm[k] ?? '').trim());
+      if (!isDirty) {
+        pushToast('No changes detected. Nothing to save.', 'info');
+        return;
+      }
     }
 
     setSaving(true);
@@ -227,42 +280,37 @@ const MyCourses = () => {
       const payload = { ...normalizedForm, instructorId: user?._id };
       if (editingId) {
         await updateCourse(editingId, payload, token);
-        pushToast('Course updated successfully!', 'success');
+        pushToast('Course updated successfully.', 'success');
       } else {
         await createCourse(payload, token);
-        pushToast('Course created! Students have been notified.', 'success');
+        pushToast('Course published. Students have been notified.', 'success');
       }
       closeModal(); fetchCourses();
     } catch (err) {
-      const serverMsg = err.response?.data?.message || err.message || 'Something went wrong.';
+      const serverMsg = err.response?.data?.message || err.message || 'An unexpected error occurred.';
       pushToast(serverMsg, 'error');
     } finally { setSaving(false); }
   };
 
-  // ── Delete ──
-  const requestDelete = (course) => {
-    setDeleteId(course._id);
-    setDeleteTarget(course);
-  };
+  const requestDelete = (course) => { setDeleteId(course._id); setDeleteTarget(course); };
 
   const confirmDelete = async () => {
     setDeleting(true);
     try {
       await deleteCourse(deleteId, token);
-      pushToast(`"${deleteTarget?.title}" has been deleted.`, 'success');
+      pushToast(`"${deleteTarget?.title}" has been permanently deleted.`, 'success');
       setDeleteId(null); setDeleteTarget(null); fetchCourses();
     } catch (err) {
       pushToast(err.response?.data?.message || 'Delete failed. Please try again.', 'error');
       setDeleteId(null); setDeleteTarget(null);
     } finally { setDeleting(false); }
   };
-
-  // ── Helpers ──
   const totalStudents = courses.reduce((s, c) => s + (c.enrolledCount || 0), 0);
   const totalSeats    = courses.reduce((s, c) => s + (c.totalSeats    || 0), 0);
   const seatPct = (c) => c.totalSeats > 0 ? Math.min(100, (c.enrolledCount / c.totalSeats) * 100) : 0;
 
-  const instructorMismatch = form.instructor.trim() !== '' &&
+  const instructorMismatch =
+    form.instructor.trim() !== '' &&
     form.instructor.trim().toLowerCase() !== (user?.name || '').toLowerCase();
 
   const inputStyle = (name) => ({
@@ -275,23 +323,31 @@ const MyCourses = () => {
     backgroundColor: fieldErrors[name] && touched[name] ? '#fff8f8' : '#fafafa',
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
+  const requiredFields = ['title', 'description', 'instructor', 'category'];
+  const filledCount    = requiredFields.filter(f => form[f]?.trim().length > 0 && !validateField(f, form[f])).length;
+  const progressPct    = Math.round((filledCount / requiredFields.length) * 100);
+
   return (
     <>
       <style>{`
-        @keyframes spin    { to { transform: rotate(360deg); } }
-        @keyframes float   { 0%,100% { transform:translateY(0);}  50% { transform:translateY(-10px); } }
-        @keyframes toastIn { from{opacity:0;transform:translateY(24px) scale(0.95);} to{opacity:1;transform:translateY(0) scale(1);} }
-        @keyframes toastOut{ from{opacity:1;transform:translateY(0) scale(1);}     to{opacity:0;transform:translateY(8px) scale(0.95);} }
-        @keyframes shake   { 0%,100%{transform:translateX(0);}  20%,60%{transform:translateX(-5px);}  40%,80%{transform:translateX(5px);} }
+        @keyframes spin      { to { transform: rotate(360deg); } }
+        @keyframes float     { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-10px);} }
         @keyframes slideDown { from{opacity:0;transform:translateY(-6px);} to{opacity:1;transform:translateY(0);} }
+
+        @keyframes toastSlideIn {
+          from { opacity:0; transform:translateX(40px) scale(0.96); }
+          to   { opacity:1; transform:translateX(0)    scale(1);    }
+        }
+        @keyframes toastProgress {
+          from { width: 100%; }
+          to   { width: 0%;   }
+        }
+
         .float-badge   { animation: float 3s ease-in-out infinite; }
         .float-badge-2 { animation: float 3s ease-in-out infinite 1.5s; }
+        .course-row-hover:hover { background-color:#fafffe !important; }
+        .action-btn:hover       { opacity:0.85; transform:scale(1.05); }
 
-        .course-row-hover:hover  { background-color:#fafffe !important; }
-        .action-btn:hover        { opacity:0.85; transform:scale(1.05); }
-
-        /* ── Orange focus ring (replaces browser default blue) ── */
         .f-input:focus {
           outline: none !important;
           border-color: #f39c12 !important;
@@ -308,12 +364,11 @@ const MyCourses = () => {
         }
         .f-input::placeholder { color:#bbb; }
 
-        .suggestion-item:hover  { background:#fff3e0; color:#e67e22; }
-        .create-btn:hover       { background:#e67e22 !important; transform:translateY(-1px); }
-        .hero-btn-sec:hover     { background:#fff3e0 !important; }
+        .create-btn:hover              { background:#e67e22 !important; transform:translateY(-1px); }
+        .hero-btn-sec:hover            { background:#fff3e0 !important; }
         .confirm-btn:hover:not(:disabled) { background:#e67e22 !important; }
-        .reset-btn:hover        { background:#fff3e0 !important; }
-        .close-btn:hover        { background:#f5f5f5 !important; }
+        .reset-btn:hover               { background:#fff3e0 !important; }
+        .close-btn:hover               { background:#f5f5f5 !important; }
         .delete-confirm-btn:hover:not(:disabled) { background:#c0392b !important; }
 
         .field-label-row { display:flex; align-items:center; gap:4px; margin-bottom:5px; }
@@ -323,7 +378,6 @@ const MyCourses = () => {
 
       <div style={styles.page}>
 
-        {/* ── HERO BANNER ── */}
         <section style={styles.hero}>
           <div style={styles.blob1} />
           <div style={styles.blob2} />
@@ -344,21 +398,18 @@ const MyCourses = () => {
             </div>
             <div style={styles.heroRight}>
               <div style={styles.heroCircle}>
-                <img src={bannerTeacher} alt="Teacher with Laptop"
+                <img src={bannerTeacher} alt="Instructor"
                   style={{ width: '500px', objectFit: 'contain', borderRadius: '12px' }} />
               </div>
-              <div style={{ ...styles.floatBadge, top: '10%', right: '-15%' }}
-                className="float-badge">
+              <div style={{ ...styles.floatBadge, top: '10%', right: '-15%' }} className="float-badge">
                 <MenuBookIcon style={{ fontSize: '16px', color: '#f39c12' }} />
                 <span style={styles.floatBadgeText}>{courses.length} Courses</span>
               </div>
-              <div style={{ ...styles.floatBadge, bottom: '-10%', left: '-5%' }}
-                className="float-badge-2">
+              <div style={{ ...styles.floatBadge, bottom: '-10%', left: '-5%' }} className="float-badge-2">
                 <GroupIcon style={{ fontSize: '16px', color: '#f39c12' }} />
                 <span style={styles.floatBadgeText}>{totalStudents} Students</span>
               </div>
-              <div style={{ ...styles.floatBadge, bottom: '18%', right: '-2%' }}
-                className="float-badge">
+              <div style={{ ...styles.floatBadge, bottom: '18%', right: '-2%' }} className="float-badge">
                 <TrendingUpIcon style={{ fontSize: '16px', color: '#f39c12' }} />
                 <span style={styles.floatBadgeText}>Track Progress</span>
               </div>
@@ -366,14 +417,12 @@ const MyCourses = () => {
           </div>
         </section>
 
-        {/* ── STATS ── */}
         <section style={styles.statsRow}>
           {[
-            { icon: <MenuBookIcon  style={styles.statIcon} />, num: courses.length,          lbl: 'Total Courses'  },
-            { icon: <GroupIcon     style={styles.statIcon} />, num: totalStudents,            lbl: 'Total Enrolled' },
-            { icon: <EventSeatIcon style={styles.statIcon} />, num: totalSeats,               lbl: 'Total Seats'    },
-            { icon: <CheckCircleIcon style={styles.statIcon} />,
-              num: courses.filter(c => c.status === 'active').length, lbl: 'Active Courses' },
+            { icon: <MenuBookIcon    style={styles.statIcon} />, num: courses.length,                              lbl: 'Total Courses'  },
+            { icon: <GroupIcon       style={styles.statIcon} />, num: totalStudents,                               lbl: 'Total Enrolled' },
+            { icon: <EventSeatIcon   style={styles.statIcon} />, num: totalSeats,                                  lbl: 'Total Seats'    },
+            { icon: <CheckCircleIcon style={styles.statIcon} />, num: courses.filter(c => c.status === 'active').length, lbl: 'Active Courses' },
           ].map((s, i) => (
             <div key={i} style={styles.statCard}>
               <div style={styles.statIconWrap}>{s.icon}</div>
@@ -385,7 +434,6 @@ const MyCourses = () => {
           ))}
         </section>
 
-        {/* ── COURSE LIST ── */}
         <div id="course-list-section" style={styles.container}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>Course List</h2>
@@ -411,7 +459,7 @@ const MyCourses = () => {
 
           {!loading && !error && courses.length === 0 && (
             <div style={styles.empty}>
-              <p style={styles.emptyIcon}>📚</p>
+              <MenuBookIcon style={{ fontSize: '48px', color: '#ddd', marginBottom: '12px' }} />
               <p style={styles.emptyText}>No courses yet</p>
               <p style={styles.emptyHint}>Click "Add New Course" to create your first course</p>
             </div>
@@ -428,7 +476,7 @@ const MyCourses = () => {
                 </thead>
                 <tbody>
                   {courses.map(course => {
-                    const pct = seatPct(course);
+                    const pct      = seatPct(course);
                     const barColor = pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00b4b4';
                     return (
                       <tr key={course._id} style={styles.tr} className="course-row-hover">
@@ -453,7 +501,7 @@ const MyCourses = () => {
                           <span style={{
                             ...styles.statusBadge,
                             backgroundColor: course.status === 'active' ? '#e8fafa' : '#f5f5f5',
-                            color: course.status === 'active' ? '#00b4b4' : '#aaa',
+                            color:           course.status === 'active' ? '#00b4b4' : '#aaa',
                           }}>
                             {course.status}
                           </span>
@@ -478,14 +526,10 @@ const MyCourses = () => {
         </div>
       </div>
 
-      {/* ════════════════════════════════════════════════════
-          CREATE / EDIT MODAL
-      ════════════════════════════════════════════════════ */}
       {modalOpen && (
         <div style={styles.overlay} onClick={e => { if (e.target === e.currentTarget) closeModal(); }}>
           <div style={styles.modal}>
 
-            {/* LEFT PANEL */}
             <div style={styles.modalLeft}>
               <img src={onlineCourse} alt="Online Course"
                 style={{ width: '280px', marginBottom: '20px', objectFit: 'contain', borderRadius: '12px' }} />
@@ -496,59 +540,36 @@ const MyCourses = () => {
                   : 'Fill in the details to publish\na new course for students.'}
               </p>
 
-              {/* Progress indicator */}
-              {(() => {
-                const requiredFields = ['title', 'description', 'instructor', 'category'];
-                const filled = requiredFields.filter(f => form[f]?.trim().length > 0 && !validateField(f, form[f])).length;
-                const pct = Math.round((filled / requiredFields.length) * 100);
-                return (
-                  <div style={styles.progressWrap}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '11px', color: '#7a4400', fontWeight: '600' }}>Form Completion</span>
-                      <span style={{ fontSize: '11px', color: '#5a2d00', fontWeight: '700' }}>{pct}%</span>
-                    </div>
-                    <div style={styles.progressBg}>
-                      <div style={{ ...styles.progressFill, width: `${pct}%` }} />
-                    </div>
-                    <p style={{ fontSize: '11px', color: '#7a4400', marginTop: '6px' }}>
-                      {filled} of {requiredFields.length} required fields complete
-                    </p>
-                  </div>
-                );
-              })()}
+              <div style={styles.progressWrap}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '11px', color: '#7a4400', fontWeight: '600' }}>Form Completion</span>
+                  <span style={{ fontSize: '11px', color: '#5a2d00', fontWeight: '700' }}>{progressPct}%</span>
+                </div>
+                <div style={styles.progressBg}>
+                  <div style={{ ...styles.progressFill, width: `${progressPct}%` }} />
+                </div>
+                <p style={{ fontSize: '11px', color: '#7a4400', marginTop: '6px' }}>
+                  {filledCount} of {requiredFields.length} required fields complete
+                </p>
+              </div>
             </div>
 
-            {/* RIGHT PANEL */}
             <div style={styles.modalRight}>
               <div style={styles.modalHeader}>
                 <div>
                   <h2 style={styles.modalTitle}>{editingId ? 'Edit Course' : 'Add New Course'}</h2>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#aaa' }}>
+                    Fields marked <span style={{ color: '#e74c3c' }}>*</span> are required
+                  </p>
                 </div>
-                <button style={styles.closeBtn} className="close-btn" onClick={closeModal}
-                  title="Close (Esc)">
+                <button style={styles.closeBtn} className="close-btn" onClick={closeModal} title="Close">
                   <CloseIcon style={{ fontSize: '20px', color: '#bbb' }} />
                 </button>
               </div>
 
-              {/* Summary error banner when submission fails */}
-              {submitAttempted && Object.keys(fieldErrors).filter(k => fieldErrors[k]).length > 0 && (
-                <div style={styles.bannerError} role="alert">
-                  <ErrorOutlineIcon style={{ fontSize: '18px', flexShrink: 0 }} />
-                  <div>
-                    <strong>Please correct the following errors:</strong>
-                    <ul style={{ margin: '6px 0 0', paddingLeft: '16px' }}>
-                      {Object.entries(fieldErrors).filter(([, v]) => v).map(([k, v]) => (
-                        <li key={k} style={{ marginBottom: '2px' }}>{v}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-
               <form onSubmit={handleSubmit} noValidate>
                 <div style={styles.formFields}>
 
-                  {/* ── Title ── */}
                   <div style={styles.formGroup}>
                     <div className="field-label-row">
                       <label style={styles.label} htmlFor="f-title">Course Title</label>
@@ -566,15 +587,13 @@ const MyCourses = () => {
                       onBlur={() => handleBlur('title')}
                       maxLength={100}
                       aria-invalid={!!fieldErrors.title}
-                      aria-describedby="title-error"
                     />
-                    <div id="title-error" data-field-error>
+                    <div data-field-error>
                       <FieldError msg={touched.title ? fieldErrors.title : ''} />
-                      {!fieldErrors.title && <FieldHint msg="A clear, descriptive title helps students find your course." />}
+                
                     </div>
                   </div>
 
-                  {/* ── Description ── */}
                   <div style={styles.formGroup}>
                     <div className="field-label-row">
                       <label style={styles.label} htmlFor="f-desc">Description</label>
@@ -585,8 +604,8 @@ const MyCourses = () => {
                     <textarea
                       id="f-desc"
                       className={`f-input${fieldErrors.description && touched.description ? ' has-error' : ''}${touched.description && !fieldErrors.description ? ' is-valid' : ''}`}
-                      style={{ ...inputStyle('description'), resize: 'vertical', minHeight: '90px', borderRadius: '8px', fontFamily: 'inherit' }}
-                      placeholder="Describe what students will learn, who it's for, and what's included…"
+                      style={{ ...inputStyle('description'), resize: 'vertical', minHeight: '100px', borderRadius: '8px', fontFamily: 'inherit' }}
+                      placeholder="Describe what students will learn, who it is for, and what is included."
                       value={form.description}
                       onChange={e => handleChange('description', e.target.value)}
                       onBlur={() => handleBlur('description')}
@@ -595,13 +614,10 @@ const MyCourses = () => {
                     />
                     <div data-field-error>
                       <FieldError msg={touched.description ? fieldErrors.description : ''} />
-                      {!fieldErrors.description && form.description.length < 20 && touched.description && (
-                        <FieldHint msg={`${20 - form.description.length} more characters needed.`} />
-                      )}
                     </div>
                   </div>
+                  <div style={{ height: '1px', backgroundColor: '#f0f0f0', margin: '2px 0' }} />
 
-                  {/* ── Instructor + Category row ── */}
                   <div style={styles.formRow}>
                     <div style={{ ...styles.formGroup, flex: 1 }}>
                       <div className="field-label-row">
@@ -625,9 +641,7 @@ const MyCourses = () => {
                       {instructorMismatch && (
                         <div style={styles.mismatchAlert} role="alert">
                           <WarningAmberIcon style={{ fontSize: '14px', color: '#b7770d', flexShrink: 0 }} />
-                          <span>
-                            Ownership stays with <strong>{user?.name}</strong>. The display name is cosmetic only.
-                          </span>
+                          <span>Ownership stays with <strong>{user?.name}</strong>. The display name is cosmetic only.</span>
                         </div>
                       )}
                     </div>
@@ -650,7 +664,8 @@ const MyCourses = () => {
                     </div>
                   </div>
 
-                  {/* ── Duration + Total Seats row ── */}
+                  <div style={{ height: '1px', backgroundColor: '#f0f0f0', margin: '2px 0' }} />
+
                   <div style={styles.formRow}>
                     <div style={{ ...styles.formGroup, flex: 1 }}>
                       <div className="field-label-row">
@@ -673,8 +688,7 @@ const MyCourses = () => {
                       </div>
                       <input
                         id="f-seats"
-                        type="number"
-                        min="1" max="1000"
+                        type="number" min="1" max="1000"
                         className={`f-input${fieldErrors.totalSeats && touched.totalSeats ? ' has-error' : ''}${touched.totalSeats && !fieldErrors.totalSeats ? ' is-valid' : ''}`}
                         style={inputStyle('totalSeats')}
                         value={form.totalSeats}
@@ -684,12 +698,13 @@ const MyCourses = () => {
                       />
                       <div data-field-error>
                         <FieldError msg={touched.totalSeats ? fieldErrors.totalSeats : ''} />
-                        {!fieldErrors.totalSeats && <FieldHint msg="Between 1 and 1000 seats." />}
+                
                       </div>
                     </div>
                   </div>
 
-                  {/* ── Status ── */}
+                  <div style={{ height: '1px', backgroundColor: '#f0f0f0', margin: '2px 0' }} />
+
                   <div style={styles.formGroup}>
                     <div className="field-label-row">
                       <label style={styles.label} htmlFor="f-status">Status</label>
@@ -711,11 +726,10 @@ const MyCourses = () => {
                     )}
                   </div>
 
-                </div>{/* /formFields */}
+                </div>
 
                 <div style={styles.modalActions}>
-                  <button type="button" style={styles.resetBtn} className="reset-btn"
-                    onClick={resetForm} title="Clear all fields">
+                  <button type="button" style={styles.resetBtn} className="reset-btn" onClick={resetForm}>
                     RESET
                   </button>
                   <button
@@ -730,25 +744,19 @@ const MyCourses = () => {
                   </button>
                 </div>
               </form>
-            </div>{/* /modalRight */}
+            </div>
           </div>
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════
-          DELETE CONFIRMATION MODAL
-      ════════════════════════════════════════════════════ */}
       {deleteId && (
         <div style={styles.overlay}>
           <div style={styles.deleteModal} role="alertdialog" aria-modal="true"
             aria-labelledby="del-title" aria-describedby="del-desc">
-
             <div style={styles.deleteIconWrap}>
               <DeleteOutlineIcon style={{ fontSize: '32px', color: '#e74c3c' }} />
             </div>
-
             <h2 id="del-title" style={styles.deleteTitle}>Delete Course?</h2>
-
             {deleteTarget && (
               <div style={styles.deleteTarget}>
                 <strong style={{ color: '#2c3e50' }}>{deleteTarget.title}</strong>
@@ -757,30 +765,22 @@ const MyCourses = () => {
                     <WarningAmberIcon style={{ fontSize: '15px', color: '#d68910', flexShrink: 0 }} />
                     <span>
                       <strong>{deleteTarget.enrolledCount} student{deleteTarget.enrolledCount !== 1 ? 's' : ''}</strong> are
-                      currently enrolled. They will lose access immediately.
+                      currently enrolled and will lose access immediately.
                     </span>
                   </div>
                 )}
               </div>
             )}
-
             <p id="del-desc" style={styles.deleteDesc}>
-              This action is <strong>permanent</strong> and cannot be undone.
-              All course data will be removed.
+              This action is <strong>permanent</strong> and cannot be undone. All course data will be removed.
             </p>
-
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <button style={styles.resetBtn} className="reset-btn"
-                onClick={() => { setDeleteId(null); setDeleteTarget(null); }}
-                disabled={deleting}>
+                onClick={() => { setDeleteId(null); setDeleteTarget(null); }} disabled={deleting}>
                 CANCEL
               </button>
-              <button
-                style={{ ...styles.confirmBtn, backgroundColor: '#e74c3c' }}
-                className="delete-confirm-btn"
-                onClick={confirmDelete}
-                disabled={deleting}
-              >
+              <button style={{ ...styles.confirmBtn, backgroundColor: '#e74c3c' }}
+                className="delete-confirm-btn" onClick={confirmDelete} disabled={deleting}>
                 {deleting ? <><span style={styles.btnSpinner} />DELETING…</> : 'YES, DELETE'}
               </button>
             </div>
@@ -788,39 +788,24 @@ const MyCourses = () => {
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════
-          TOAST STACK
-      ════════════════════════════════════════════════════ */}
-      <div style={styles.toastStack} aria-live="polite" aria-atomic="false">
+      <div
+        style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 600, display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end' }}
+        aria-live="polite"
+        aria-atomic="false"
+      >
         {toasts.map(t => (
-          <div key={t.id} style={{
-            ...styles.toast,
-            backgroundColor:
-              t.type === 'error'   ? '#e74c3c' :
-              t.type === 'warning' ? '#f39c12' :
-              '#27ae60',
-          }}>
-            {t.type === 'error'   && <ErrorOutlineIcon  style={{ fontSize: '16px', flexShrink: 0 }} />}
-            {t.type === 'warning' && <WarningAmberIcon   style={{ fontSize: '16px', flexShrink: 0 }} />}
-            {t.type === 'success' && <CheckCircleIcon    style={{ fontSize: '16px', flexShrink: 0 }} />}
-            <span>{t.msg}</span>
-          </div>
+          <ToastCard key={t.id} toast={t} onDismiss={dismissToast} />
         ))}
       </div>
     </>
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = {
   page: { fontFamily: 'Segoe UI, sans-serif', backgroundColor: '#f5f6fa', minHeight: '100vh' },
 
-  hero: {
-    position: 'relative',
-    background: 'linear-gradient(135deg, #fae9d7 0%, #f8e3bf 50%, #fdd79f 100%)',
-    padding: '70px 60px', overflow: 'hidden', minHeight: '380px',
-  },
+  hero: { position: 'relative', background: 'linear-gradient(135deg, #fae9d7 0%, #f8e3bf 50%, #fdd79f 100%)', padding: '70px 60px', overflow: 'hidden', minHeight: '380px' },
   blob1: { position: 'absolute', top: '-60px', right: '35%', width: '240px', height: '240px', borderRadius: '50%', background: 'rgba(243,157,18,0.31)', pointerEvents: 'none' },
   blob2: { position: 'absolute', bottom: '-40px', right: '-1%', width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(243,156,18,0.31)', pointerEvents: 'none' },
   heroInner: { position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '40px', maxWidth: '1100px', margin: '0 auto' },
@@ -831,7 +816,7 @@ const styles = {
   heroBtns:    { display: 'flex', gap: '14px', flexWrap: 'wrap' },
   heroBtnSecondary: { backgroundColor: '#fff', color: '#f39c12', border: '1.5px solid #f39c12', padding: '13px 28px', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', fontWeight: '700', transition: 'all 0.2s' },
   heroRight:   { position: 'relative', width: '360px', height: '300px', flexShrink: 0 },
-  heroCircle:  { position: 'absolute', top: '65%', left: '50%', transform: 'translate(-50%, -50%)', width: '480px', height: '480px', borderRadius: '50%', background: 'linear-gradient(135deg, #f39c12, #e67e22)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 40px rgba(243,156,18,0.35)' },
+  heroCircle:  { position: 'absolute', top: '65%', left: '50%', transform: 'translate(-50%,-50%)', width: '480px', height: '480px', borderRadius: '50%', background: 'linear-gradient(135deg,#f39c12,#e67e22)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 40px rgba(243,156,18,0.35)' },
   floatBadge:  { position: 'absolute', backgroundColor: '#fff', borderRadius: '30px', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '7px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: '600', color: '#2c3e50', whiteSpace: 'nowrap' },
   floatBadgeText: { fontSize: '14px', color: '#2c3e50', fontWeight: '600' },
 
@@ -847,17 +832,16 @@ const styles = {
   sectionTitle:  { fontSize: '24px', color: '#2c3e50', margin: 0 },
   createBtn: { backgroundColor: '#f39c12', color: '#fff', border: 'none', padding: '11px 22px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '7px', transition: 'all 0.2s' },
 
-  errorBox: { backgroundColor: '#fdecea', color: '#e74c3c', padding: '14px 18px', borderRadius: '10px', marginBottom: '16px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' },
+  errorBox:    { backgroundColor: '#fdecea', color: '#e74c3c', padding: '14px 18px', borderRadius: '10px', marginBottom: '16px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' },
   loadingWrap: { textAlign: 'center', padding: '60px' },
-  spinner: { width: '36px', height: '36px', border: '3px solid #f0f0f0', borderTop: '3px solid #00b4b4', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' },
+  spinner:     { width: '36px', height: '36px', border: '3px solid #f0f0f0', borderTop: '3px solid #00b4b4', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' },
   loadingText: { color: '#888', fontSize: '15px' },
-  empty:    { textAlign: 'center', padding: '60px 20px' },
-  emptyIcon: { fontSize: '48px', margin: '0 0 10px' },
-  emptyText: { fontSize: '18px', color: '#2c3e50', fontWeight: '600', marginBottom: '6px' },
-  emptyHint: { fontSize: '14px', color: '#aaa' },
+  empty:       { textAlign: 'center', padding: '60px 20px' },
+  emptyText:   { fontSize: '18px', color: '#2c3e50', fontWeight: '600', marginBottom: '6px' },
+  emptyHint:   { fontSize: '14px', color: '#aaa' },
 
-  tableWrap:  { backgroundColor: '#fff', borderRadius: '14px', boxShadow: '0 3px 12px rgba(0,0,0,0.07)', overflow: 'hidden' },
-  table:      { width: '100%', borderCollapse: 'collapse' },
+  tableWrap: { backgroundColor: '#fff', borderRadius: '14px', boxShadow: '0 3px 12px rgba(0,0,0,0.07)', overflow: 'hidden' },
+  table:     { width: '100%', borderCollapse: 'collapse' },
   th: { padding: '14px 16px', textAlign: 'left', backgroundColor: '#fff8f0', color: '#f39c12', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #f0f0f0' },
   tr: { transition: 'background-color 0.15s' },
   td: { padding: '14px 16px', borderBottom: '1px solid #f5f5f5', verticalAlign: 'middle' },
@@ -865,63 +849,48 @@ const styles = {
   barWrap: { height: '6px', backgroundColor: '#f0f0f0', borderRadius: '999px', overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: '999px', transition: 'width 0.4s ease' },
   statusBadge: { padding: '4px 12px', borderRadius: '15px', fontSize: '12px', fontWeight: '700', textTransform: 'capitalize' },
-  editBtn: { backgroundColor: '#e8fafa', color: '#00b4b4', border: 'none', padding: '7px 14px', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.15s' },
+  editBtn:   { backgroundColor: '#e8fafa', color: '#00b4b4', border: 'none', padding: '7px 14px', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.15s' },
   deleteBtn: { backgroundColor: '#fdecea', color: '#e74c3c', border: 'none', padding: '7px 14px', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.15s' },
 
-  // ── Modal ──
   overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' },
-  modal: { backgroundColor: '#fff', borderRadius: '18px', width: '100%', maxWidth: '830px', maxHeight: '92vh', boxShadow: '0 20px 60px rgba(0,0,0,0.22)', display: 'flex', overflow: 'hidden', animation: 'toastIn 0.25s ease' },
+  modal:   { backgroundColor: '#fff', borderRadius: '18px', width: '100%', maxWidth: '900px', maxHeight: '92vh', boxShadow: '0 20px 60px rgba(0,0,0,0.22)', display: 'flex', overflow: 'hidden' },
 
-  modalLeft: { width: '260px', flexShrink: 0, background: 'linear-gradient(155deg, #e6940f 45%, #eead58 60%, #f0cd91 80%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 24px 40px', textAlign: 'center' },
+  modalLeft: { width: '270px', flexShrink: 0, background: 'linear-gradient(155deg, #e6940f 45%, #eead58 60%, #f0cd91 80%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 24px 40px', textAlign: 'center' },
   illustrationTitle: { fontSize: '19px', fontWeight: '700', color: '#5a2d00', margin: '0 0 8px' },
   illustrationSub:   { fontSize: '12px', color: '#7a4400', lineHeight: '1.65', margin: '0 0 20px', whiteSpace: 'pre-line' },
-
   progressWrap: { width: '100%', backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: '10px', padding: '12px 14px' },
   progressBg:   { height: '6px', backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: '999px', overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: '#5a2d00', borderRadius: '999px', transition: 'width 0.35s ease' },
 
-  modalRight:   { flex: 1, display: 'flex', flexDirection: 'column', padding: '30px 32px', overflowY: 'auto' },
-  modalHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
-  modalTitle:   { fontSize: '20px', color: '#2c3e50', fontWeight: '700', margin: 0 },
-  closeBtn:     { background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px', borderRadius: '6px', transition: 'background 0.15s', flexShrink: 0 },
+  modalRight:  { flex: 1, display: 'flex', flexDirection: 'column', padding: '30px 32px', overflowY: 'auto' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
+  modalTitle:  { fontSize: '20px', color: '#2c3e50', fontWeight: '700', margin: 0 },
+  closeBtn:    { background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px', borderRadius: '6px', transition: 'background 0.15s', flexShrink: 0 },
 
-  bannerError: { backgroundColor: '#fdecea', color: '#c0392b', padding: '12px 16px', borderRadius: '9px', marginBottom: '18px', fontSize: '13px', display: 'flex', gap: '10px', alignItems: 'flex-start', lineHeight: '1.55', animation: 'slideDown 0.2s ease', border: '1px solid #f5c6cb' },
-
-  formFields: { display: 'flex', flexDirection: 'column', gap: '18px' },
-  formRow:    { display: 'flex', gap: '14px' },
-  formGroup:  { display: 'flex', flexDirection: 'column', gap: '0', flex: 1 },
+  formFields: { display: 'flex', flexDirection: 'column', gap: '22px' },
+  formRow:    { display: 'flex', gap: '18px' },
+  formGroup:  { display: 'flex', flexDirection: 'column', flex: 1 },
   label:      { fontSize: '13px', fontWeight: '600', color: '#444' },
 
-  input: {
-    padding: '11px 14px', borderRadius: '8px', border: '1.5px solid #e0e0e0',
-    fontSize: '14px', backgroundColor: '#fafafa', color: '#2c3e50',
-    transition: 'border-color 0.2s, box-shadow 0.2s, background-color 0.2s',
-    width: '100%', boxSizing: 'border-box', fontFamily: 'inherit',
-  },
+  input: { padding: '11px 14px', borderRadius: '8px', border: '1.5px solid #e0e0e0', fontSize: '14px', backgroundColor: '#fafafa', color: '#2c3e50', transition: 'border-color 0.2s, box-shadow 0.2s, background-color 0.2s', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' },
 
   fieldError: { display: 'flex', alignItems: 'center', gap: '5px', color: '#e74c3c', fontSize: '12px', marginTop: '5px', animation: 'slideDown 0.18s ease' },
-  fieldHint:  { display: 'flex', alignItems: 'center', gap: '5px', color: '#aaa', fontSize: '11px', marginTop: '4px' },
+  fieldHint:  { display: 'flex', alignItems: 'center', gap: '5px', color: '#aaa',    fontSize: '11px', marginTop: '4px' },
 
-  mismatchAlert: { display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: '#7a5a00', lineHeight: '1.55', marginTop: '6px', animation: 'slideDown 0.18s ease' },
+  mismatchAlert: { display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: '#7a5a00', lineHeight: '1.55', marginTop: '6px' },
   infoAlert:     { display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#e8f0fe', border: '1px solid #c5d9f7', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: '#1a73e8', lineHeight: '1.55', marginTop: '6px' },
 
-
   modalActions: { display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px', paddingTop: '18px', borderTop: '1px solid #f0f0f0' },
-  resetBtn:  { padding: '10px 28px', backgroundColor: '#fff', color: '#f39c12', border: '1.5px solid #f39c12', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', letterSpacing: '0.05em', transition: 'background-color 0.2s' },
+  resetBtn:   { padding: '10px 28px', backgroundColor: '#fff', color: '#f39c12', border: '1.5px solid #f39c12', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', letterSpacing: '0.05em', transition: 'background-color 0.2s' },
   confirmBtn: { padding: '10px 28px', backgroundColor: '#f39c12', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', letterSpacing: '0.05em', transition: 'background-color 0.2s', display: 'flex', alignItems: 'center', gap: '8px' },
   btnSpinner: { width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTop: '2px solid #fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.6s linear infinite' },
 
-  // ── Delete Modal ──
-  deleteModal:   { backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '420px', padding: '36px 32px', boxShadow: '0 20px 60px rgba(0,0,0,0.22)', textAlign: 'center', animation: 'toastIn 0.25s ease' },
+  deleteModal:    { backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '420px', padding: '36px 32px', boxShadow: '0 20px 60px rgba(0,0,0,0.22)', textAlign: 'center' },
   deleteIconWrap: { width: '64px', height: '64px', backgroundColor: '#fdecea', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' },
-  deleteTitle:   { fontSize: '20px', color: '#2c3e50', fontWeight: '700', margin: '0 0 12px' },
-  deleteTarget:  { backgroundColor: '#f9f9f9', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '14px', textAlign: 'left' },
-  deleteWarning: { display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#7a5a00', marginTop: '10px', lineHeight: '1.5' },
-  deleteDesc:    { color: '#888', fontSize: '13px', marginBottom: '24px', lineHeight: '1.6' },
-
-  // ── Toast stack ──
-  toastStack: { position: 'fixed', bottom: '24px', right: '24px', zIndex: 500, display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end' },
-  toast: { color: '#fff', padding: '12px 20px', borderRadius: '10px', fontSize: '14px', fontWeight: '600', boxShadow: '0 6px 24px rgba(0,0,0,0.18)', maxWidth: '340px', display: 'flex', alignItems: 'center', gap: '9px', animation: 'toastIn 0.3s ease forwards', lineHeight: '1.4' },
+  deleteTitle:    { fontSize: '20px', color: '#2c3e50', fontWeight: '700', margin: '0 0 12px' },
+  deleteTarget:   { backgroundColor: '#f9f9f9', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '14px', textAlign: 'left' },
+  deleteWarning:  { display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#7a5a00', marginTop: '10px', lineHeight: '1.5' },
+  deleteDesc:     { color: '#888', fontSize: '13px', marginBottom: '24px', lineHeight: '1.6' },
 };
 
 export default MyCourses;
