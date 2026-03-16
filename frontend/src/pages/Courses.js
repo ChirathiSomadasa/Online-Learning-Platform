@@ -24,12 +24,12 @@ const FAQS = [
 ];
 
 const CARD_GRADIENTS = [
-  'linear-gradient(135deg, #00b4b4 0%, #007a75 100%)',
-  'linear-gradient(135deg, #6c63ff 0%, #3b37c9 100%)',
-  'linear-gradient(135deg, #f7971e 0%, #e55d1a 100%)',
+  'linear-gradient(135deg, #04c8c8 0%, #0b4a48 100%)',
+  'linear-gradient(135deg, #3a7fb1 0%, #023d52 100%)',
+  'linear-gradient(135deg, #f2b66c 0%, #c15b28 100%)',
   'linear-gradient(135deg, #43b89c 0%, #1d7a60 100%)',
-  'linear-gradient(135deg, #e96caa 0%, #b83580 100%)',
-  'linear-gradient(135deg, #4776e6 0%, #1b4dbd 100%)',
+  'linear-gradient(135deg, #e4c490 0%, #ab6c05 100%)',
+  'linear-gradient(135deg, #6b90e7 0%, #273e70 100%)',
 ];
 
 const CARD_ICON_BG = [
