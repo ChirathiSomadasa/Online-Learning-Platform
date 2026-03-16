@@ -16,6 +16,9 @@ import MenuBookIcon      from '@mui/icons-material/MenuBook';
 import StarIcon          from '@mui/icons-material/Star';
 import SchoolIcon        from '@mui/icons-material/School';
 import bannerGirl from '../images/course/course_girl.png';
+import axios from 'axios';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const FAQS = [
   { q: 'How do I enroll in a course?', a: 'Browse the course catalog, click "View Details" on any course, and use the enrollment option. You can filter by category or search by name to find what suits you.' },
@@ -95,10 +98,39 @@ const Courses = () => {
 
   const closeModal = () => { setModalOpen(false); setSelected(null); };
 
-  // Navigate to the enroll form, passing the course id (and optionally state)
-  const handleEnroll = () => {
-    navigate(`/enroll/${selected._id}`);
-  };
+
+const handleEnroll = async () => {
+  try {
+    const token = localStorage.getItem('token');
+
+    const response = await axios.post(
+      'http://localhost:3003/api/enrollment',
+      { courseId: selected._id },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (response.data) {
+      toast.success('Successfully enrolled in course!');
+      closeModal();
+      // Navigate to enrollments page with success message
+      navigate('/enrollments', {
+        state: {
+          enrollmentSuccess: true,
+          message: `Successfully enrolled in ${selected.title}`
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Enrollment error:', error);
+    toast.error(error.response?.data?.message || 'Failed to enroll in course');
+  }
+};
+
 
   const seatPct   = (c) => c.totalSeats > 0 ? Math.min(100, (c.enrolledCount / c.totalSeats) * 100) : 0;
   const seatColor = (pct) => pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00b4b4';
