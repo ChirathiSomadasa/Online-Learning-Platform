@@ -99,13 +99,28 @@ const Enrollments = () => {
 
         // Status filter
         if (statusFilter !== 'all') {
-            filtered = filtered.filter(e => e.status === statusFilter);
+            filtered = filtered.filter(e => {
+                const status = e.status?.toLowerCase() || '';
+
+                switch (statusFilter) {
+                    case 'active':
+                        return status === 'active' || status === 'in-progress' || status === 'in progress';
+                    case 'completed':
+                        // Check for completed based on progress or status
+                        return status === 'completed' || status === 'complete' || e.progress === 100;
+                    case 'cancelled':
+                        return status === 'cancelled' || status === 'canceled';
+                    default:
+                        return true;
+                }
+            });
         }
 
         // Apply sorting with cancelled courses at bottom
         filtered = sortEnrollments(filtered, sortBy);
 
         setFilteredEnrollments(filtered);
+
     }, [enrollments, searchTerm, statusFilter, sortBy]);
 
     const fetchEnrollments = async () => {
@@ -126,8 +141,12 @@ const Enrollments = () => {
 
     const calculateStats = (enrollmentsData) => {
         const total = enrollmentsData.length;
-        const completed = enrollmentsData.filter(e => e.progress === 100).length;
-        const inProgress = enrollmentsData.filter(e => e.progress > 0 && e.progress < 100).length;
+        const completed = enrollmentsData.filter(e => e.progress === 100 ||
+            e.status?.toLowerCase() === 'completed' ||
+            e.status?.toLowerCase() === 'complete').length;
+        const inProgress = enrollmentsData.filter(e => e.progress > 0 && e.progress < 100 &&
+            e.status?.toLowerCase() !== 'cancelled' &&
+            e.status?.toLowerCase() !== 'completed').length;
         const totalProgress = enrollmentsData.reduce((sum, e) => sum + (e.progress || 0), 0);
         const averageProgress = total > 0 ? Math.round(totalProgress / total) : 0;
 
@@ -241,22 +260,66 @@ const Enrollments = () => {
         );
     };
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'active': return '#00b4b4';
-            case 'completed': return '#2e7d32';
-            case 'cancelled': return '#e74c3c';
-            default: return '#888';
+    const getDisplayStatus = (status, progress) => {
+        // If progress is 100%, always show as completed
+        if (progress === 100) {
+            return 'completed';
+        }
+
+        // Otherwise use the actual status
+        const statusLower = status?.toLowerCase() || '';
+
+        if (statusLower === 'cancelled' || statusLower === 'canceled') {
+            return 'cancelled';
+        }
+
+        if (statusLower === 'active' || statusLower === 'in-progress' || statusLower === 'in progress') {
+            return 'active';
+        }
+
+        if (statusLower === 'completed' || statusLower === 'complete') {
+            return 'completed';
+        }
+
+        return statusLower;
+    };
+
+    // Function to get color based on display status
+    const getStatusColor = (status, progress) => {
+        const displayStatus = getDisplayStatus(status, progress);
+
+        switch (displayStatus) {
+            case 'completed':
+                return '#2e7d32'; // Green for completed
+            case 'cancelled':
+                return '#e74c3c'; // Red for cancelled
+            case 'active':
+                return '#00b4b4'; // Teal for active
+            default:
+                return '#888'; // Grey for unknown
         }
     };
 
-    const getStatusIcon = (status) => {
-        switch (status) {
-            case 'active': return <AccessTimeIcon style={{ fontSize: 16 }} />;
-            case 'completed': return <EmojiEventsIcon style={{ fontSize: 16 }} />;
-            case 'cancelled': return <CancelIcon style={{ fontSize: 16 }} />;
-            default: return null;
+    const getStatusIcon = (status, progress) => {
+        const statusLower = status?.toLowerCase() || '';
+
+        // First check if progress is 100% 
+        if (progress === 100) {
+            return <EmojiEventsIcon style={{ fontSize: 16 }} />;
         }
+
+        // Then check status
+        if (statusLower === 'completed' || statusLower === 'complete') {
+            return <EmojiEventsIcon style={{ fontSize: 16 }} />;
+        }
+        if (statusLower === 'cancelled' || statusLower === 'canceled') {
+            return <CancelIcon style={{ fontSize: 16 }} />;
+        }
+        if (statusLower === 'active' || statusLower === 'in-progress' || statusLower === 'in progress') {
+            return <AccessTimeIcon style={{ fontSize: 16 }} />;
+        }
+
+        return null;
     };
 
     const getProgressColor = (progress) => {
@@ -492,7 +555,9 @@ const Enrollments = () => {
                         ) : (
                             filteredEnrollments.map((enroll) => {
                                 const progressColor = getProgressColor(enroll.progress);
-                                const statusColor = getStatusColor(enroll.status);
+                                const statusColor = getStatusColor(enroll.status, enroll.progress);
+                                const statusIcon = getStatusIcon(enroll.status, enroll.progress);
+                                const displayStatus = getDisplayStatus(enroll.status, enroll.progress);
 
                                 return (
                                     <div
@@ -520,8 +585,8 @@ const Enrollments = () => {
                                                     backgroundColor: `${statusColor}15`,
                                                     color: statusColor
                                                 }}>
-                                                    {getStatusIcon(enroll.status)}
-                                                    <span style={{ marginLeft: 4 }}>{enroll.status}</span>
+                                                    {statusIcon}
+                                                    <span style={{ marginLeft: 4 }}>{displayStatus}</span>
                                                 </span>
                                             </div>
                                             <h3 style={styles.courseTitle}>{enroll.courseTitle}</h3>
