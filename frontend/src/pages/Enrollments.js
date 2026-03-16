@@ -313,10 +313,6 @@ const Enrollments = () => {
                             <EmojiEventsIcon style={{ fontSize: '16px', color: '#00a89d' }} />
                             <span style={styles.floatBadgeText}>{stats.completed} Completed</span>
                         </div>
-                        <div style={{ ...styles.floatBadge, bottom: '8%', right: '-50%' }} className="float-badge">
-                            <TrendingUpIcon style={{ fontSize: '16px', color: '#00a89d' }} />
-                            <span style={styles.floatBadgeText}>{stats.averageProgress}% Avg Progress</span>
-                        </div>
                         <div style={{ ...styles.dot, top: '120%', left: '-25%', width: '14px', height: '14px', opacity: 0.5 }} />
                         <div style={{ ...styles.dot, bottom: '25%', right: '-25%', width: '20px', height: '20px', opacity: 0.3 }} />
                         <div style={{ ...styles.dot, top: '55%', left: '-38%', width: '10px', height: '10px', opacity: 0.4 }} />
