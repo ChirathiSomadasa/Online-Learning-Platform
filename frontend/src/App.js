@@ -9,6 +9,7 @@ import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import StudentHome from './pages/StudentHome';
 import InstructorHome from './pages/InstructorHome';
+import ForgotPassword from './pages/ForgotPassword';
 
 // Layout WITH header and footer
 const WithLayout = ({ children }) => (
@@ -27,6 +28,7 @@ function App() {
           {/* NO header/footer */}
           <Route path="/login"  element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot" element={<ForgotPassword />} />
 
           {/* WITH header and footer */}
           <Route path="/" element={<WithLayout><Home /></WithLayout>} />
