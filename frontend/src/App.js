@@ -9,8 +9,8 @@ import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import StudentHome from './pages/StudentHome';
 import InstructorHome from './pages/InstructorHome';
+import NotificationsPage from './pages/NotificationsPage';
 import ForgotPassword from './pages/ForgotPassword';
-
 // Layout WITH header and footer
 const WithLayout = ({ children }) => (
   <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -35,6 +35,7 @@ function App() {
           <Route path="/profile" element={<WithLayout><Profile /></WithLayout>} />
           <Route path="/student-home" element={<WithLayout><StudentHome /></WithLayout>} />
           <Route path="/instructor-home" element={<WithLayout><InstructorHome /></WithLayout>} />
+          <Route path="/notifications" element={<WithLayout><NotificationsPage /></WithLayout>} />
         </Routes>
       </Router>
     </AuthProvider>

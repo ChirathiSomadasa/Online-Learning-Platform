@@ -15,13 +15,14 @@
 
 // notification-service/src/middleware/authMiddleware.js
 const axios = require('axios');
+const AUTH_URL = process.env.USER_AUTH_URL || 'http://localhost:3001';
 
 module.exports = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ message: 'No token provided' });
 
   try {
-    const validateUrl = `${process.env.USER_AUTH_URL}/api/auth/validate`;
+    const validateUrl = `${AUTH_URL}/api/auth/validate`;
     const response = await axios.get(validateUrl, {
       headers: { Authorization: authHeader },
       timeout: 5000,
