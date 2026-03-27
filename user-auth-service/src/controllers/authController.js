@@ -7,8 +7,10 @@ const bcrypt = require('bcryptjs');
 const sanitizeEmail = (email) => {
   if (typeof email !== 'string') return null;
   const trimmed = email.trim().toLowerCase();
-  // Basic email format check
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  // FIXED: Replaced '+' with bounded length limits {1,256} and {2,64} to prevent ReDoS
+  const emailRegex = /^[^\s@]{1,256}@[^\s@]{1,256}\.[^\s@]{2,64}$/;
+  
   return emailRegex.test(trimmed) ? trimmed : null;
 };
 
