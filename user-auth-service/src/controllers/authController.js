@@ -1,24 +1,52 @@
-const User  = require('../models/User');
-const jwt   = require('jsonwebtoken');
-const axios = require('axios');
+const User   = require('../models/User');
+const jwt    = require('jsonwebtoken');
+const axios  = require('axios');
 const bcrypt = require('bcryptjs');
+
+// Input sanitizer helper
+const sanitizeEmail = (email) => {
+  if (typeof email !== 'string') return null;
+  const trimmed = email.trim().toLowerCase();
+  // Basic email format check
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(trimmed) ? trimmed : null;
+};
+
+const sanitizeString = (value) => {
+  if (typeof value !== 'string') return null;
+  return value.trim();
+};
 
 // POST /api/auth/register
 exports.register = async (req, res) => {
   try {
     const { name, email, password, role, securityQuestion, securityAnswer } = req.body;
 
-    const existing = await User.findOne({ email });
+    // Sanitize inputs
+    const cleanEmail  = sanitizeEmail(email);
+    const cleanName   = sanitizeString(name);
+    const cleanRole   = sanitizeString(role);
+
+    if (!cleanEmail)  return res.status(400).json({ message: 'Invalid email address' });
+    if (!cleanName)   return res.status(400).json({ message: 'Name is required' });
+    if (!password || typeof password !== 'string' || password.length < 6)
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+
+    // Use sanitized email in DB query — prevents NoSQL injection
+    const existing = await User.findOne({ email: cleanEmail });
     if (existing) return res.status(400).json({ message: 'Email already registered' });
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const hashedAnswer   = securityAnswer
-      ? await bcrypt.hash(securityAnswer.trim().toLowerCase(), 12)
+      ? await bcrypt.hash(sanitizeString(securityAnswer).toLowerCase(), 12)
       : '';
 
     const user = await User.create({
-      name, email, password: hashedPassword, role,
-      securityQuestion: securityQuestion || '',
+      name:             cleanName,
+      email:            cleanEmail,
+      password:         hashedPassword,
+      role:             cleanRole || 'student',
+      securityQuestion: sanitizeString(securityQuestion) || '',
       securityAnswer:   hashedAnswer
     });
 
@@ -31,8 +59,8 @@ exports.register = async (req, res) => {
     try {
       await axios.post(
         `${process.env.NOTIFICATION_SERVICE_URL}/api/notifications/send`,
-        { to: email, type: 'welcome', userName: name,
-          message: `Welcome to the Online Learning Platform, ${name}!` }
+        { to: cleanEmail, type: 'welcome', userName: cleanName,
+          message: `Welcome to the Online Learning Platform, ${cleanName}!` }
       );
     } catch (notifyErr) {
       console.warn('Notification service unavailable:', notifyErr.message);
@@ -41,18 +69,20 @@ exports.register = async (req, res) => {
     res.status(201).json({
       message: 'User registered successfully',
       token,
-      user: { id: user._id, name, email, role }
+      user: { id: user._id, name: cleanName, email: cleanEmail, role: cleanRole }
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
-// POST /api/auth/forgot-password/question — get the user's security question
+// POST /api/auth/forgot-password/question
 exports.getSecurityQuestion = async (req, res) => {
   try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
+    const cleanEmail = sanitizeEmail(req.body.email);
+    if (!cleanEmail) return res.status(400).json({ message: 'Invalid email address' });
+
+    const user = await User.findOne({ email: cleanEmail });
     if (!user) return res.status(404).json({ message: 'No account found with this email' });
     if (!user.securityQuestion)
       return res.status(400).json({ message: 'No security question set for this account' });
@@ -63,22 +93,24 @@ exports.getSecurityQuestion = async (req, res) => {
   }
 };
 
-// POST /api/auth/forgot-password/reset — verify answer and reset password
+// POST /api/auth/forgot-password/reset
 exports.resetPasswordWithQuestion = async (req, res) => {
   try {
     const { email, securityAnswer, newPassword } = req.body;
 
-    if (!email || !securityAnswer || !newPassword)
-      return res.status(400).json({ message: 'All fields are required' });
+    const cleanEmail  = sanitizeEmail(email);
+    const cleanAnswer = sanitizeString(securityAnswer);
 
-    if (newPassword.length < 6)
+    if (!cleanEmail)  return res.status(400).json({ message: 'Invalid email address' });
+    if (!cleanAnswer) return res.status(400).json({ message: 'Security answer is required' });
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6)
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: cleanEmail });
     if (!user) return res.status(404).json({ message: 'No account found with this email' });
 
     const isMatch = await bcrypt.compare(
-      securityAnswer.trim().toLowerCase(),
+      cleanAnswer.toLowerCase(),
       user.securityAnswer
     );
     if (!isMatch) return res.status(401).json({ message: 'Incorrect answer. Please try again.' });
@@ -97,10 +129,14 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const cleanEmail = sanitizeEmail(email);
+    if (!cleanEmail) return res.status(400).json({ message: 'Invalid email address' });
+    if (!password || typeof password !== 'string')
+      return res.status(400).json({ message: 'Password is required' });
+
+    const user = await User.findOne({ email: cleanEmail });
     if (!user) return res.status(401).json({ message: 'Invalid email or password' });
 
-    // Compare password here in controller
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid email or password' });
 
@@ -113,7 +149,7 @@ exports.login = async (req, res) => {
     res.json({
       message: 'Login successful',
       token,
-      user: { id: user._id, name: user.name, email, role: user.role }
+      user: { id: user._id, name: user.name, email: cleanEmail, role: user.role }
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -135,7 +171,7 @@ exports.validate = (req, res) => {
 // GET /api/auth/profile
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id).select('-password -securityAnswer');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (err) {
@@ -146,16 +182,20 @@ exports.getProfile = async (req, res) => {
 // PUT /api/auth/profile
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const cleanEmail = sanitizeEmail(req.body.email);
+    const cleanName  = sanitizeString(req.body.name);
 
-    const existing = await User.findOne({ email, _id: { $ne: req.user.id } });
+    if (!cleanEmail) return res.status(400).json({ message: 'Invalid email address' });
+    if (!cleanName)  return res.status(400).json({ message: 'Name is required' });
+
+    const existing = await User.findOne({ email: cleanEmail, _id: { $ne: req.user.id } });
     if (existing) return res.status(400).json({ message: 'Email already in use' });
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
-      { name, email },
+      { name: cleanName, email: cleanEmail },
       { new: true, runValidators: true }
-    ).select('-password');
+    ).select('-password -securityAnswer');
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -170,10 +210,9 @@ exports.updatePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    if (!currentPassword || !newPassword)
-      return res.status(400).json({ message: 'Both currentPassword and newPassword are required' });
-
-    if (newPassword.length < 6)
+    if (!currentPassword || typeof currentPassword !== 'string')
+      return res.status(400).json({ message: 'Current password is required' });
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6)
       return res.status(400).json({ message: 'New password must be at least 6 characters' });
 
     const user = await User.findById(req.user.id);
