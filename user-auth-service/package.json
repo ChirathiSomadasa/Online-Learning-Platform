@@ -6,7 +6,18 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest --testPathPatterns=tests/ --forceExit"
+    "test": "jest --testPathPatterns=tests/ --forceExit",
+    "test:coverage": "jest --testPathPatterns=tests/ --forceExit --coverage"
+  },
+    "jest": {
+    "testEnvironment": "node",
+    "collectCoverage": true,
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["lcov", "text", "clover"],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!**/node_modules/**"
+    ]
   },
   "keywords": [],
   "author": "",

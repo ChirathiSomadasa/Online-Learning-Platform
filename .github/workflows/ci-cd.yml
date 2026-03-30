@@ -21,8 +21,14 @@ jobs:
           node-version: '18'
       # Install dependencies
       - run: npm ci
-      # Run tests
-      - run: npm test -- --forceExit
+      # Run tests WITH coverage (generates coverage/lcov.info)
+      - run: npm run test:coverage
+
+      # Upload coverage folder so sonarcloud job can use it
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: user-auth-service/coverage/
 
   # Job 2: SonarCloud code quality and security scan
   sonarcloud:
@@ -32,6 +38,11 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0  # Full history needed for SonarCloud analysis
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: user-auth-service/coverage/
+
       - uses: SonarSource/sonarqube-scan-action@v5.0.0
         with:
           projectBaseDir: user-auth-service  # Scan only user-auth-service folder
