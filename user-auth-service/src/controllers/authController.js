@@ -7,10 +7,10 @@ const bcrypt = require('bcryptjs');
 const sanitizeEmail = (email) => {
   if (typeof email !== 'string') return null;
   const trimmed = email.trim().toLowerCase();
-  
+
   // FIXED: Replaced '+' with bounded length limits {1,256} and {2,64} to prevent ReDoS
   const emailRegex = /^[^\s@]{1,256}@[^\s@]{1,256}\.[^\s@]{2,64}$/;
-  
+
   return emailRegex.test(trimmed) ? trimmed : null;
 };
 
@@ -25,30 +25,39 @@ exports.register = async (req, res) => {
     const { name, email, password, role, securityQuestion, securityAnswer } = req.body;
 
     // Sanitize inputs
-    const cleanEmail  = sanitizeEmail(email);
-    const cleanName   = sanitizeString(name);
-    const cleanRole   = sanitizeString(role);
+    const cleanEmail    = sanitizeEmail(email);
+    const cleanName     = sanitizeString(name);
+    const cleanRole     = sanitizeString(role);
+    const cleanQuestion = sanitizeString(securityQuestion);
+    const cleanAnswer   = sanitizeString(securityAnswer);
 
-    if (!cleanEmail)  return res.status(400).json({ message: 'Invalid email address' });
-    if (!cleanName)   return res.status(400).json({ message: 'Name is required' });
+    // Validate required fields
+    if (!cleanEmail)    return res.status(400).json({ message: 'Invalid email address' });
+    if (!cleanName)     return res.status(400).json({ message: 'Name is required' });
     if (!password || typeof password !== 'string' || password.length < 6)
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
+
+    // Validate role — only student or instructor allowed
+    if (cleanRole && !['student', 'instructor'].includes(cleanRole))
+      return res.status(400).json({ message: 'Role must be student or instructor' });
+
+    // securityQuestion and securityAnswer  required
+    if (!cleanQuestion) return res.status(400).json({ message: 'Security question is required' });
+    if (!cleanAnswer)   return res.status(400).json({ message: 'Security answer is required' });
 
     // Use sanitized email in DB query — prevents NoSQL injection
     const existing = await User.findOne({ email: cleanEmail });
     if (existing) return res.status(400).json({ message: 'Email already registered' });
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const hashedAnswer   = securityAnswer
-      ? await bcrypt.hash(sanitizeString(securityAnswer).toLowerCase(), 12)
-      : '';
+    const hashedAnswer   = await bcrypt.hash(cleanAnswer.toLowerCase(), 12);
 
     const user = await User.create({
       name:             cleanName,
       email:            cleanEmail,
       password:         hashedPassword,
       role:             cleanRole || 'student',
-      securityQuestion: sanitizeString(securityQuestion) || '',
+      securityQuestion: cleanQuestion,
       securityAnswer:   hashedAnswer
     });
 
@@ -71,7 +80,7 @@ exports.register = async (req, res) => {
     res.status(201).json({
       message: 'User registered successfully',
       token,
-      user: { id: user._id, name: cleanName, email: cleanEmail, role: cleanRole }
+      user: { id: user._id, name: cleanName, email: cleanEmail, role: cleanRole || 'student' }
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });

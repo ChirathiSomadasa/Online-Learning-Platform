@@ -9,13 +9,18 @@
     "test": "jest --testPathPatterns=tests/ --forceExit",
     "test:coverage": "jest --testPathPatterns=tests/ --forceExit --coverage"
   },
-    "jest": {
+  "jest": {
     "testEnvironment": "node",
     "collectCoverage": true,
     "coverageDirectory": "coverage",
-    "coverageReporters": ["lcov", "text", "clover"],
+    "coverageReporters": [
+      "lcov",
+      "text",
+      "clover"
+    ],
     "collectCoverageFrom": [
       "src/**/*.js",
+      "!src/index.js",
       "!**/node_modules/**"
     ]
   },

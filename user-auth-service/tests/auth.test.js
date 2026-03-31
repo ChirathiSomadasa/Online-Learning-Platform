@@ -53,20 +53,54 @@ describe('Auth Service - Complete Coverage Suite', () => {
       expect(res.body.message).toBe('Password must be at least 6 characters');
     });
 
-    test('4. Fails if email already registered', async () => {
+    // Covers role validation
+    test('4. Fails on invalid role', async () => {
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'test@test.com', name: 'Test', password: 'password123', role: 'admin'
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe('Role must be student or instructor');
+    });
+
+    // Covers required securityQuestion
+    test('5. Fails on missing security question', async () => {
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'test@test.com', name: 'Test', password: 'password123'
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe('Security question is required');
+    });
+
+    // Covers required securityAnswer
+    test('6. Fails on missing security answer', async () => {
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'test@test.com', name: 'Test', password: 'password123',
+        securityQuestion: 'Pet name?'
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe('Security answer is required');
+    });
+
+    test('7. Fails if email already registered', async () => {
       User.findOne.mockResolvedValue({ email: 'test@test.com' });
-      const res = await request(app).post('/api/auth/register').send({ email: 'test@test.com', name: 'Test', password: 'password123' });
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'test@test.com', name: 'Test', password: 'password123',
+        securityQuestion: 'Pet name?', securityAnswer: 'Fluffy'
+      });
       expect(res.statusCode).toBe(400);
       expect(res.body.message).toBe('Email already registered');
     });
 
-    test('5. Fails on DB error', async () => {
+    test('8. Fails on DB error', async () => {
       User.findOne.mockRejectedValue(new Error('DB crash'));
-      const res = await request(app).post('/api/auth/register').send({ email: 'test@test.com', name: 'Test', password: 'password123' });
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'test@test.com', name: 'Test', password: 'password123',
+        securityQuestion: 'Pet name?', securityAnswer: 'Fluffy'
+      });
       expect(res.statusCode).toBe(500);
     });
 
-    test('6. Succeeds with security answer and sends notification', async () => {
+    test('9. Succeeds with all required fields and sends notification', async () => {
       User.findOne.mockResolvedValue(null);
       User.create.mockResolvedValue({ _id: '1', name: 'Test', email: 'test@test.com', role: 'student' });
       bcrypt.hash.mockResolvedValue('hashed');
@@ -74,27 +108,43 @@ describe('Auth Service - Complete Coverage Suite', () => {
       axios.post.mockResolvedValue(true);
 
       const res = await request(app).post('/api/auth/register').send({
-        email: 'test@test.com', name: 'Test', password: 'password123', securityAnswer: 'Fluffy'
+        email: 'test@test.com', name: 'Test', password: 'password123',
+        securityQuestion: 'Pet name?', securityAnswer: 'Fluffy'
       });
       expect(res.statusCode).toBe(201);
       expect(res.body.token).toBe('token');
     });
 
-    test('7. Succeeds even if notification service fails (Catch block)', async () => {
+    test('10. Succeeds even if notification service fails (Catch block)', async () => {
       User.findOne.mockResolvedValue(null);
       User.create.mockResolvedValue({ _id: '1', name: 'Test', email: 't@t.com', role: 'student' });
       bcrypt.hash.mockResolvedValue('hashed');
       jwt.sign.mockReturnValue('token');
-      axios.post.mockRejectedValue(new Error('Network Error')); // Triggers catch(notifyErr)
+      axios.post.mockRejectedValue(new Error('Network Error'));
 
       const res = await request(app).post('/api/auth/register').send({
-        email: 't@t.com', name: 'Test', password: 'password123'
+        email: 't@t.com', name: 'Test', password: 'password123',
+        securityQuestion: 'Pet name?', securityAnswer: 'Fluffy'
       });
-      expect(res.statusCode).toBe(201); // Should still pass
+      expect(res.statusCode).toBe(201);
     });
 
-    // Covers authController.js (sanitizeEmail typeof check)
-    test('8. Fails when email is a non-string type (covers sanitizeEmail typeof check)', async () => {
+    test('11. Succeeds with instructor role', async () => {
+      User.findOne.mockResolvedValue(null);
+      User.create.mockResolvedValue({ _id: '1', name: 'Test', email: 'test@test.com', role: 'instructor' });
+      bcrypt.hash.mockResolvedValue('hashed');
+      jwt.sign.mockReturnValue('token');
+      axios.post.mockResolvedValue(true);
+
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'test@test.com', name: 'Test', password: 'password123',
+        role: 'instructor', securityQuestion: 'Pet name?', securityAnswer: 'Fluffy'
+      });
+      expect(res.statusCode).toBe(201);
+    });
+
+    // Covers sanitizeEmail typeof check (line 8 in authController)
+    test('12. Fails when email is a non-string type', async () => {
       const res = await request(app)
         .post('/api/auth/register')
         .send({ email: 12345, name: 'Test', password: 'password123' });
@@ -245,14 +295,14 @@ describe('Auth Service - Complete Coverage Suite', () => {
   // ==========================================
   describe('Protected Routes (Profile Management)', () => {
 
-    // Covers authMiddleware.js (no token provided)
+    // Covers authMiddleware.js line 5 — no token provided
     test('Middleware - Fails without token header', async () => {
       const res = await request(app).get('/api/auth/profile');
       expect(res.statusCode).toBe(401);
       expect(res.body.message).toBe('No token provided');
     });
 
-    // Covers authMiddleware.js catch block (invalid/expired token)
+    // Covers authMiddleware.js line 10 — catch block (invalid/expired token)
     test('Middleware - Fails with invalid token (covers catch block line 10)', async () => {
       jwt.verify.mockImplementation(() => { throw new Error('Invalid token'); });
       const res = await request(app)
@@ -293,14 +343,14 @@ describe('Auth Service - Complete Coverage Suite', () => {
       });
 
       test('PUT Profile - Email in use', async () => {
-        User.findOne.mockResolvedValue({ _id: 'otherId' }); // Email taken by someone else
+        User.findOne.mockResolvedValue({ _id: 'otherId' });
         const res = await request(app).put('/api/auth/profile').set('Authorization', 'Bearer token').send({ email: 't@t.com', name: 'Test' });
         expect(res.statusCode).toBe(400);
       });
 
       test('PUT Profile - User not found during update', async () => {
         User.findOne.mockResolvedValue(null);
-        User.findByIdAndUpdate.mockReturnValue(mockQuery(null)); // Not found
+        User.findByIdAndUpdate.mockReturnValue(mockQuery(null));
         const res = await request(app).put('/api/auth/profile').set('Authorization', 'Bearer token').send({ email: 't@t.com', name: 'Test' });
         expect(res.statusCode).toBe(404);
       });
