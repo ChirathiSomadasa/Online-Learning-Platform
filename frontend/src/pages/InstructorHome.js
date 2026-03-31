@@ -1,97 +1,113 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import Header from '../components/Header';
 
 // MUI Icons
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SchoolIcon from '@mui/icons-material/School';
-import StarRateIcon from '@mui/icons-material/StarRate';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import EditIcon from '@mui/icons-material/Edit';
 import GroupIcon from '@mui/icons-material/Group';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import PersonIcon from '@mui/icons-material/Person';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 
 const InstructorHome = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const myCourses = [
-    { id: 1, title: 'Node.js Fundamentals', students: 28, status: 'Active' },
-    { id: 2, title: 'Advanced JavaScript', students: 15, status: 'Active' },
-    { id: 3, title: 'API Design', students: 22, status: 'Draft' },
+    { id: 1, title: 'Node.js Fundamentals',  students: 28, duration: '8 Weeks',  category: 'Programming', level: 'Beginner',     status: 'Active' },
+    { id: 2, title: 'Advanced JavaScript',   students: 15, duration: '6 Weeks',  category: 'Frontend',    level: 'Advanced',     status: 'Active' },
+    { id: 3, title: 'API Design',            students: 22, duration: '5 Weeks',  category: 'Backend',     level: 'Intermediate', status: 'Draft'  },
+    { id: 4, title: 'Cloud Computing',       students: 18, duration: '10 Weeks', category: 'Cloud',       level: 'Advanced',     status: 'Active' },
+    { id: 5, title: 'React for Beginners',   students: 30, duration: '7 Weeks',  category: 'Frontend',    level: 'Beginner',     status: 'Active' },
+    { id: 6, title: 'Database Design',       students: 12, duration: '4 Weeks',  category: 'Database',    level: 'Beginner',     status: 'Draft'  },
   ];
 
   const stats = [
-    { icon: <MenuBookIcon style={styles.statIcon} />, num: '3',   lbl: 'Total Courses' },
-    { icon: <SchoolIcon   style={styles.statIcon} />, num: '65',  lbl: 'Total Students' },
-    { icon: <StarRateIcon style={styles.statIcon} />, num: '4.8', lbl: 'Average Rating' },
-    { icon: <TrendingUpIcon style={styles.statIcon} />, num: '92%', lbl: 'Completion Rate' },
+    { icon: <MenuBookIcon  />, num: '6',   lbl: 'Total Courses',    color: '#f39c12' },
+    { icon: <SchoolIcon    />, num: '125', lbl: 'Total Students',   color: '#49BBBD' },
+    { icon: <TrendingUpIcon/>, num: '92%', lbl: 'Completion Rate',  color: '#2ecc71' },
   ];
 
   return (
     <div style={styles.page}>
 
       {/* HERO BANNER */}
-      <section style={styles.banner}>
-        <h1 style={styles.bannerTitle}>Instructor Dashboard</h1>
-        <p style={styles.bannerSubtitle}>
-          Welcome back, <strong>{user?.name}</strong>! Manage your courses and track student progress.
-        </p>
-        <span style={styles.badge}>Instructor Panel</span>
+      <section style={styles.heroBanner}>
+        <div style={styles.overlay}>
+          <div style={styles.heroContent}>
+            <span style={styles.badge}>
+              <RocketLaunchIcon style={{ fontSize: '14px', marginRight: '6px' }} />
+              Instructor Dashboard
+            </span>
+            <h1 style={styles.bannerTitle}>
+              Welcome back, <span style={styles.highlight}>{user?.name || 'Instructor'}</span>!
+            </h1>
+            <p style={styles.bannerSubtitle}>
+              Manage your courses and inspire students every day
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* STATS */}
-      <section style={styles.statsRow}>
-        {stats.map((s, i) => (
-          <div key={i} style={styles.statCard}>
-            <div style={styles.statIconWrap}>{s.icon}</div>
-            <div>
-              <h3 style={styles.statNum}>{s.num}</h3>
-              <p style={styles.statLbl}>{s.lbl}</p>
+      <section style={styles.statsContainer}>
+        <div style={styles.statsRow}>
+          {stats.map((s, i) => (
+            <div key={i} style={styles.statCard}>
+              <div style={{ ...styles.statIconWrap, backgroundColor: `${s.color}18` }}>
+                {React.cloneElement(s.icon, { style: { fontSize: '28px', color: s.color } })}
+              </div>
+              <div>
+                <h3 style={styles.statNum}>{s.num}</h3>
+                <p style={styles.statLbl}>{s.lbl}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
 
       {/* MY COURSES */}
       <section style={styles.section}>
         <div style={styles.sectionHeader}>
-          <h2 style={styles.sectionTitle}>My Courses</h2>
-          <button style={styles.createBtn}>
-            <AddCircleOutlineIcon style={{ fontSize: '18px' }} />
-            Create New Course
-          </button>
+          <div>
+            <h2 style={styles.sectionTitle}>My Courses</h2>
+            <p style={styles.sectionSubtitle}>Courses you are currently teaching</p>
+          </div>
         </div>
 
-        <div style={styles.courseList}>
+        <div style={styles.courseGrid}>
           {myCourses.map(course => (
-            <div key={course.id} style={styles.courseRow}>
+            <div key={course.id} style={styles.courseCard}>
 
-              <div style={styles.courseInfo}>
-                <h3 style={styles.courseTitle}>{course.title}</h3>
-                <div style={styles.courseMetaRow}>
-                  <GroupIcon style={styles.metaIcon} />
-                  <span style={styles.courseStudents}>{course.students} students enrolled</span>
-                </div>
-              </div>
-
-              <div style={styles.courseActions}>
+              {/* Card Top */}
+              <div style={styles.cardHeader}>
+                <span style={styles.courseCategory}>{course.category}</span>
                 <span style={{
                   ...styles.statusBadge,
                   backgroundColor: course.status === 'Active' ? '#e8fafa' : '#fff3e0',
-                  color: course.status === 'Active' ? '#00b4b4' : '#f39c12',
+                  color:           course.status === 'Active' ? '#49BBBD' : '#f39c12',
                 }}>
                   {course.status}
                 </span>
-                <button style={styles.editBtn}>
-                  <EditIcon style={{ fontSize: '15px' }} />
-                  Edit
-                </button>
-                <button style={styles.viewBtn}>
-                  <GroupIcon style={{ fontSize: '15px' }} />
-                  View Students
-                </button>
+              </div>
+
+              {/* Title */}
+              <h3 style={styles.courseTitle}>{course.title}</h3>
+
+              {/* Meta */}
+              <div style={styles.detailsBox}>
+                <div style={styles.metaRow}>
+                  <GroupIcon style={styles.metaIcon} />
+                  <span style={styles.metaText}>{course.students} Students Enrolled</span>
+                </div>
+                <div style={styles.metaRow}>
+                  <AccessTimeIcon style={styles.metaIcon} />
+                  <span style={styles.metaText}>{course.duration}</span>
+                </div>
+                <div style={styles.metaRow}>
+                  <PersonIcon style={styles.metaIcon} />
+                  <span style={styles.metaText}>Level: {course.level}</span>
+                </div>
               </div>
 
             </div>
@@ -105,139 +121,168 @@ const InstructorHome = () => {
 
 const styles = {
   page: {
-    fontFamily: 'Segoe UI, sans-serif',
-    backgroundColor: '#f5f6fa',
+    fontFamily: "'Inter', 'Segoe UI', sans-serif",
+    backgroundColor: '#f8f9fd',
     minHeight: '100vh',
+    paddingBottom: '50px',
   },
 
-  // Banner
-  banner: {
-    background: 'linear-gradient(135deg, #f39c12, #e67e22)',
-    padding: '60px',
+  // HERO
+  heroBanner: {
+    height: '340px',
+    backgroundImage: 'url("https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80&w=1920")',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    background: 'linear-gradient(to right, rgba(0,0,0,0.82) 0%, rgba(243,156,18,0.45) 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0 80px',
+  },
+  heroContent: {
+    maxWidth: '600px',
     color: '#fff',
-  },
-  bannerTitle: {
-    fontSize: '36px',
-    fontWeight: 'bold',
-    marginBottom: '10px',
-    margin: '0 0 10px',
-  },
-  bannerSubtitle: {
-    fontSize: '17px',
-    opacity: 0.9,
-    marginBottom: '20px',
-    margin: '0 0 20px',
   },
   badge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    color: '#fff',
-    padding: '5px 18px',
-    borderRadius: '20px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    backdropFilter: 'blur(5px)',
+    padding: '6px 16px',
+    borderRadius: '30px',
     fontSize: '13px',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    marginBottom: '16px',
+  },
+  bannerTitle: {
+    fontSize: '46px',
+    fontWeight: '800',
+    margin: '0 0 14px',
+    lineHeight: '1.2',
+  },
+  highlight: { color: '#f39c12' },
+  bannerSubtitle: {
+    fontSize: '17px',
+    opacity: 0.88,
+    margin: 0,
+    lineHeight: '1.6',
   },
 
-  // Stats
+  // STATS
+  statsContainer: {
+    padding: '30px 80px',
+    backgroundColor: '#f8f9fd',
+  },
   statsRow: {
     display: 'flex',
     gap: '20px',
-    padding: '30px 60px',
     flexWrap: 'wrap',
-    justifyContent: 'center',
   },
   statCard: {
     backgroundColor: '#fff',
-    borderRadius: '12px',
-    padding: '25px 35px',
+    borderRadius: '16px',
+    padding: '24px',
     display: 'flex',
     alignItems: 'center',
-    gap: '20px',
-    boxShadow: '0 3px 12px rgba(0,0,0,0.07)',
+    gap: '15px',
+    boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
     flex: '1',
-    minWidth: '180px',
+    minWidth: '220px',
   },
   statIconWrap: {
-    backgroundColor: '#fff3e0',
-    width: '55px',
-    height: '55px',
-    borderRadius: '50%',
+    width: '52px',
+    height: '52px',
+    borderRadius: '12px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statIcon: { color: '#f39c12', fontSize: '28px' },
-  statNum: { fontSize: '28px', fontWeight: 'bold', color: '#2c3e50', margin: 0 },
-  statLbl: { color: '#888', fontSize: '13px', margin: 0 },
+  statNum: { fontSize: '26px', fontWeight: 'bold', color: '#1a1a1a', margin: 0 },
+  statLbl: { color: '#666', fontSize: '13px', margin: 0 },
 
-  // Courses section
-  section: { padding: '20px 60px 60px' },
+  // COURSES SECTION
+  section: { padding: '10px 80px 60px' },
   sectionHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '25px',
+    alignItems: 'flex-end',
+    marginBottom: '30px',
   },
-  sectionTitle: { fontSize: '26px', color: '#2c3e50', margin: 0 },
-  createBtn: {
-    backgroundColor: '#f39c12',
-    color: '#fff',
-    border: 'none',
-    padding: '10px 22px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-    fontSize: '14px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '7px',
+  sectionTitle: {
+    fontSize: '26px',
+    color: '#1a1a1a',
+    margin: 0,
+    fontWeight: '700',
+  },
+  sectionSubtitle: {
+    color: '#666',
+    fontSize: '15px',
+    marginTop: '6px',
+    marginBottom: 0,
   },
 
-  courseList: { display: 'flex', flexDirection: 'column', gap: '15px' },
-  courseRow: {
+  // COURSE GRID
+  courseGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: '28px',
+  },
+  courseCard: {
     backgroundColor: '#fff',
-    borderRadius: '12px',
-    padding: '25px 30px',
+    borderRadius: '16px',
+    padding: '26px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+    border: '1px solid #edf2f7',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+  },
+  cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    boxShadow: '0 3px 12px rgba(0,0,0,0.07)',
+    marginBottom: '14px',
   },
-  courseInfo: {},
-  courseTitle: { fontSize: '18px', color: '#2c3e50', margin: '0 0 8px' },
-  courseMetaRow: { display: 'flex', alignItems: 'center', gap: '6px' },
-  metaIcon: { color: '#f39c12', fontSize: '16px' },
-  courseStudents: { color: '#888', fontSize: '13px' },
-
-  courseActions: { display: 'flex', alignItems: 'center', gap: '12px' },
-  statusBadge: {
-    padding: '5px 14px',
-    borderRadius: '15px',
+  courseCategory: {
+    color: '#f39c12',
     fontSize: '12px',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  statusBadge: {
+    padding: '3px 12px',
+    borderRadius: '20px',
+    fontSize: '11px',
     fontWeight: 'bold',
   },
-  editBtn: {
-    backgroundColor: '#f5f5f5',
-    color: '#555',
-    border: 'none',
-    padding: '8px 16px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '13px',
+  courseTitle: {
+    fontSize: '18px',
+    color: '#1a1a1a',
+    margin: '0 0 18px',
+    fontWeight: '700',
+    lineHeight: '1.4',
+    height: '52px',
+    overflow: 'hidden',
+  },
+  detailsBox: {
+    borderTop: '1px solid #f1f3f5',
+    paddingTop: '14px',
+  },
+  metaRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '5px',
+    gap: '10px',
+    marginBottom: '10px',
   },
-  viewBtn: {
-    backgroundColor: '#f39c12',
-    color: '#fff',
-    border: 'none',
-    padding: '8px 16px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '13px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '5px',
-  },
+  metaIcon: { color: '#a0aec0', fontSize: '17px' },
+  metaText: { color: '#4a5568', fontSize: '14px' },
 };
 
 export default InstructorHome;
