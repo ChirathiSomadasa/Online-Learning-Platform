@@ -1,6 +1,6 @@
 const request = require('supertest');
-const app = require('../src/app'); 
-const User = require('../src/models/User'); 
+const app = require('../src/app');
+const User = require('../src/models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
@@ -16,7 +16,7 @@ const mockQuery = (data) => ({
 });
 
 describe('Auth Service - Complete Coverage Suite', () => {
-  
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -91,6 +91,15 @@ describe('Auth Service - Complete Coverage Suite', () => {
         email: 't@t.com', name: 'Test', password: 'password123'
       });
       expect(res.statusCode).toBe(201); // Should still pass
+    });
+
+    // Covers authController.js (sanitizeEmail typeof check)
+    test('8. Fails when email is a non-string type (covers sanitizeEmail typeof check)', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ email: 12345, name: 'Test', password: 'password123' });
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe('Invalid email address');
     });
   });
 
@@ -235,12 +244,22 @@ describe('Auth Service - Complete Coverage Suite', () => {
   // 5. PROTECTED ROUTES & MIDDLEWARE
   // ==========================================
   describe('Protected Routes (Profile Management)', () => {
-    
-    // Covers line 5 in authMiddleware.js
+
+    // Covers authMiddleware.js (no token provided)
     test('Middleware - Fails without token header', async () => {
       const res = await request(app).get('/api/auth/profile');
       expect(res.statusCode).toBe(401);
-      expect(res.body.message).toBe('No token provided'); 
+      expect(res.body.message).toBe('No token provided');
+    });
+
+    // Covers authMiddleware.js catch block (invalid/expired token)
+    test('Middleware - Fails with invalid token (covers catch block line 10)', async () => {
+      jwt.verify.mockImplementation(() => { throw new Error('Invalid token'); });
+      const res = await request(app)
+        .get('/api/auth/profile')
+        .set('Authorization', 'Bearer invalidtoken');
+      expect(res.statusCode).toBe(401);
+      expect(res.body.message).toBe('Invalid or expired token');
     });
 
     describe('With Valid Token', () => {

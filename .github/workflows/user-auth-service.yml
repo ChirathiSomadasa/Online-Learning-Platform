@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: user-auth-service CI/CD
 
 # Triggers: runs on push to main or user-auth-service branch, and on pull requests to main
 on:
@@ -27,7 +27,7 @@ jobs:
       # Upload coverage folder so sonarcloud job can use it
       - uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
+          name: user-auth-coverage-report
           path: user-auth-service/coverage/
 
   # Job 2: SonarCloud code quality and security scan
@@ -40,7 +40,7 @@ jobs:
           fetch-depth: 0  # Full history needed for SonarCloud analysis
       - uses: actions/download-artifact@v4
         with:
-          name: coverage-report
+          name: user-auth-coverage-report
           path: user-auth-service/coverage/
 
       - uses: SonarSource/sonarqube-scan-action@v5.0.0
