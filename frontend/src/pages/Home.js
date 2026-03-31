@@ -158,7 +158,7 @@ const Home = () => {
             much easier
           </h1>
           <p style={styles.heroText}>
-            OLP is an interesting platform that will teach
+            EduNest is an interesting platform that will teach
             you in a more interactive way.
           </p>
           <div style={styles.heroBtns}>
@@ -251,27 +251,33 @@ const Home = () => {
       {/* WHAT IS OLP */}
       <section style={styles.about}>
         <h2 style={styles.aboutTitle} className="about-title-anim">
-          What is <span style={styles.teal}>OLP?</span>
+          What is <span style={styles.teal}>EduNest?</span>
         </h2>
         <p style={styles.aboutText} className="about-text-anim">
-          OLP is a platform that allows educators to create online classes whereby they can
+          EduNest is a platform that allows educators to create online classes whereby they can
           store the course materials online, manage assignments, quizzes and exams, monitor
           due dates, grade results and provide students with feedback all in one place.
         </p>
         <div style={styles.roleGrid}>
-          <div style={styles.roleCard} className="role-card-left-anim">
+          <div style={styles.roleCard2} className="role-card-left-anim">
             <div style={styles.roleOverlay}>
               <h3 style={styles.roleTitle}>FOR INSTRUCTORS</h3>
               <Link to="/signup" style={styles.roleBtn}>Start a class today</Link>
             </div>
           </div>
-          <div style={styles.roleCard2} className="role-card-right-anim">
+          <div style={styles.roleCard} className="role-card-right-anim">
             <div style={styles.roleOverlay}>
               <h3 style={styles.roleTitle}>FOR STUDENTS</h3>
               <Link to="/signup" style={styles.roleBtn}>Enter access code</Link>
             </div>
           </div>
         </div>
+      </section>
+
+      <section style={styles.ctaBanner}>
+        <h2 style={styles.ctaTitle}>Ready to Start Your Learning Journey?</h2>
+        <p style={styles.ctaSubtitle}>Join thousands of students already learning on EduNest</p>
+        <Link to="/signup" style={styles.ctaBtn}>Get Started for Free</Link>
       </section>
 
     </div>
@@ -528,6 +534,34 @@ const styles = {
     textDecoration: 'none',
     fontSize: '13px',
     fontWeight: 'bold',
+  },
+
+  ctaBanner: {
+    backgroundColor: '#04a5a7',
+    padding: '70px 60px',
+    textAlign: 'center',
+  },
+  ctaTitle: {
+    fontSize: '34px',
+    fontWeight: '800',
+    color: '#fff',
+    margin: '0 0 14px',
+  },
+  ctaSubtitle: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: '16px',
+    margin: '0 0 32px',
+  },
+  ctaBtn: {
+    backgroundColor: '#fff',
+    color: '#058083',
+    padding: '16px 40px',
+    borderRadius: '30px',
+    textDecoration: 'none',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
+    display: 'inline-block',
   },
 };
 

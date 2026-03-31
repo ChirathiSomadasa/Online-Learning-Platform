@@ -24,6 +24,8 @@ components:
         - name
         - email
         - password
+        - securityQuestion
+        - securityAnswer
       properties:
         name:
           type: string
@@ -34,13 +36,19 @@ components:
           example: chirathi@gmail.com
         password:
           type: string
-          minLength: 4
+          minLength: 6
           example: pass1234
         role:
           type: string
-          enum: [student, instructor, admin]
+          enum: [student, instructor]
           default: student
           example: student
+        securityQuestion:
+          type: string
+          example: What is your pet's name?
+        securityAnswer:
+          type: string
+          example: Fluffy
 
     LoginRequest:
       type: object
@@ -56,6 +64,63 @@ components:
           type: string
           example: pass1234
 
+    UpdateProfileRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          example: Chirathi Somadasa
+        email:
+          type: string
+          format: email
+          example: chirathi@gmail.com
+
+    UpdatePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          example: oldpassword123
+        newPassword:
+          type: string
+          minLength: 6
+          example: newpassword123
+
+    ForgotPasswordQuestionRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: chirathi@gmail.com
+
+    ForgotPasswordResetRequest:
+      type: object
+      required:
+        - email
+        - securityAnswer
+        - newPassword
+      properties:
+        email:
+          type: string
+          format: email
+          example: chirathi@gmail.com
+        securityAnswer:
+          type: string
+          example: Fluffy
+        newPassword:
+          type: string
+          minLength: 6
+          example: newpassword123
+
     UserResponse:
       type: object
       properties:
@@ -70,7 +135,31 @@ components:
           example: chirathi@gmail.com
         role:
           type: string
+          enum: [student, instructor]
           example: student
+
+    UserProfileResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 69a91dd92f64596d389b0cef
+        name:
+          type: string
+          example: Chirathi Somadasa
+        email:
+          type: string
+          example: chirathi@gmail.com
+        role:
+          type: string
+          enum: [student, instructor]
+          example: student
+        securityQuestion:
+          type: string
+          example: What is your pet's name?
+        createdAt:
+          type: string
+          example: 2026-03-05T06:08:25.710Z
 
     AuthResponse:
       type: object
@@ -106,6 +195,13 @@ components:
               type: string
               example: Chirathi Somadasa
 
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Operation successful
+
     ErrorResponse:
       type: object
       properties:
@@ -114,6 +210,10 @@ components:
           example: Server error
 
 paths:
+
+  # ==========================================
+  # HEALTH CHECK
+  # ==========================================
   /health:
     get:
       summary: Health check
@@ -135,10 +235,13 @@ paths:
                     type: string
                     example: user-auth-service
 
+  # ==========================================
+  # AUTHENTICATION
+  # ==========================================
   /api/auth/register:
     post:
       summary: Register a new user
-      description: Creates a new user account and returns a JWT token. Also sends a welcome email via Notification Service.
+      description: Creates a new user account and returns a JWT token. Security question and answer are required for password recovery. Also sends a welcome email via Notification Service.
       tags:
         - Authentication
       requestBody:
@@ -155,13 +258,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
-          description: Email already registered
+          description: Validation error or email already registered
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                message: Email already registered
+              examples:
+                invalidEmail:
+                  summary: Invalid email address
+                  value:
+                    message: Invalid email address
+                missingName:
+                  summary: Name is required
+                  value:
+                    message: Name is required
+                shortPassword:
+                  summary: Password too short
+                  value:
+                    message: Password must be at least 6 characters
+                invalidRole:
+                  summary: Invalid role
+                  value:
+                    message: Role must be student or instructor
+                missingQuestion:
+                  summary: Security question missing
+                  value:
+                    message: Security question is required
+                missingAnswer:
+                  summary: Security answer missing
+                  value:
+                    message: Security answer is required
+                emailTaken:
+                  summary: Email already registered
+                  value:
+                    message: Email already registered
         '500':
           description: Server error
           content:
@@ -188,6 +318,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidEmail:
+                  summary: Invalid email
+                  value:
+                    message: Invalid email address
+                missingPassword:
+                  summary: Password missing
+                  value:
+                    message: Password is required
         '401':
           description: Invalid credentials
           content:
@@ -232,12 +377,15 @@ paths:
                     type: string
                     example: Invalid or expired token
 
+  # ==========================================
+  # PROFILE MANAGEMENT
+  # ==========================================
   /api/auth/profile:
     get:
       summary: Get user profile
       description: Returns the logged-in user's profile. Requires valid JWT token.
       tags:
-        - Authentication
+        - Profile
       security:
         - BearerAuth: []
       responses:
@@ -246,23 +394,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  _id:
-                    type: string
-                    example: 69a91dd92f64596d389b0cef
-                  name:
-                    type: string
-                    example: Chirathi Somadasa
-                  email:
-                    type: string
-                    example: chirathi@gmail.com
-                  role:
-                    type: string
-                    example: student
-                  createdAt:
-                    type: string
-                    example: 2026-03-05T06:08:25.710Z
+                $ref: '#/components/schemas/UserProfileResponse'
         '401':
           description: No token provided
           content:
@@ -279,6 +411,300 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 message: User not found
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update user profile
+      description: Updates the logged-in user's name and email. Requires valid JWT token.
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Profile updated successfully
+                  user:
+                    $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          description: Validation error or email already in use
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidEmail:
+                  summary: Invalid email
+                  value:
+                    message: Invalid email address
+                missingName:
+                  summary: Name required
+                  value:
+                    message: Name is required
+                emailInUse:
+                  summary: Email taken
+                  value:
+                    message: Email already in use
+        '401':
+          description: No token provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: No token provided
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: User not found
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete user account
+      description: Permanently deletes the logged-in user's account. Requires valid JWT token.
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Account deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Account deleted successfully
+        '401':
+          description: No token provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: No token provided
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: User not found
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/profile/password:
+    put:
+      summary: Update password
+      description: Updates the logged-in user's password. Requires the current password for verification. Requires valid JWT token.
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePasswordRequest'
+      responses:
+        '200':
+          description: Password updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Password updated successfully
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingCurrent:
+                  summary: Current password missing
+                  value:
+                    message: Current password is required
+                shortNew:
+                  summary: New password too short
+                  value:
+                    message: New password must be at least 6 characters
+        '401':
+          description: No token or wrong current password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                noToken:
+                  summary: No token
+                  value:
+                    message: No token provided
+                wrongPassword:
+                  summary: Wrong current password
+                  value:
+                    message: Current password is incorrect
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: User not found
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==========================================
+  # FORGOT PASSWORD
+  # ==========================================
+  /api/auth/forgot-password/question:
+    post:
+      summary: Get security question
+      description: Returns the security question for the given email address. Used as the first step of password recovery.
+      tags:
+        - Forgot Password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordQuestionRequest'
+      responses:
+        '200':
+          description: Security question returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  securityQuestion:
+                    type: string
+                    example: What is your pet's name?
+        '400':
+          description: Validation error or no security question set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidEmail:
+                  summary: Invalid email
+                  value:
+                    message: Invalid email address
+                noQuestion:
+                  summary: No security question set
+                  value:
+                    message: No security question set for this account
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: No account found with this email
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/forgot-password/reset:
+    post:
+      summary: Reset password using security answer
+      description: Resets the user's password after verifying the security answer. Used as the second step of password recovery.
+      tags:
+        - Forgot Password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordResetRequest'
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Password reset successfully. You can now login.
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidEmail:
+                  summary: Invalid email
+                  value:
+                    message: Invalid email address
+                missingAnswer:
+                  summary: Security answer missing
+                  value:
+                    message: Security answer is required
+                shortPassword:
+                  summary: Password too short
+                  value:
+                    message: Password must be at least 6 characters
+        '401':
+          description: Incorrect security answer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Incorrect answer. Please try again.
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: No account found with this email
         '500':
           description: Server error
           content:

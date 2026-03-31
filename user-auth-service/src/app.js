@@ -1,16 +1,30 @@
-const express = require('express');
-const helmet = require('helmet');
-const cors = require('cors');
+const express    = require('express');
+const helmet     = require('helmet');
+const cors       = require('cors');
 const authRoutes = require('./routes/authRoutes');
-const swaggerUi = require('swagger-ui-express');
-const yaml = require('js-yaml');
-const fs = require('fs');
-const path = require('path');
+const swaggerUi  = require('swagger-ui-express');
+const yaml       = require('js-yaml');
+const fs         = require('node:fs');
+const path       = require('node:path');
 
 const app = express();
 
 app.use(helmet());
-app.use(cors());
+
+// Restrict CORS to API Gateway and internal services only
+app.use(cors({
+  origin: [
+    'http://localhost:3000',  // API Gateway — forwards all frontend requests
+    'http://localhost:3002',  // Course Catalog Service — calls /validate
+    'http://localhost:3003',  // Enrollment Service — calls /validate
+    'http://localhost:3004',  // Notification Service — calls /validate
+    process.env.FRONTEND_URL  // Production frontend URL from .env
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Swagger UI

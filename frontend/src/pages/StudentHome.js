@@ -1,660 +1,352 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
 // MUI Icons
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import PersonIcon from '@mui/icons-material/Person';
 import EventSeatIcon from '@mui/icons-material/EventSeat';
-import SchoolIcon from '@mui/icons-material/School';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 
 const StudentHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
+  // State for dynamic stats and enrollments
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [courses, setCourses] = useState([]);
-  const [stats, setStats] = useState({
-    enrolledCourses: 0,
-    completedCourses: 0,
-    inProgressCourses: 0,
-    totalLearningHours: 0,
-    certificatesEarned: 0,
-    averageProgress: 0
+  const [userStats, setUserStats] = useState({
+    enrolled: 0,
+    completed: 0,
+    hours: 0
   });
 
+  const courses = [
+    { id: 1, title: 'Node.js Fundamentals', instructor: 'Dr. Silva', category: 'Programming', seats: '30/50', duration: '8 Weeks', level: 'Beginner' },
+    { id: 2, title: 'React.js Basics', instructor: 'Dr. Perera', category: 'Frontend', seats: '20/40', duration: '6 Weeks', level: 'Intermediate' },
+    { id: 3, title: 'Cloud Computing', instructor: 'Dr. Fernando', category: 'Cloud', seats: '15/35', duration: '10 Weeks', level: 'Advanced' },
+    { id: 4, title: 'Machine Learning', instructor: 'Dr. Kamal', category: 'AI', seats: '25/45', duration: '12 Weeks', level: 'Intermediate' },
+    { id: 5, title: 'Cybersecurity', instructor: 'Dr. Nimal', category: 'Security', seats: '10/30', duration: '8 Weeks', level: 'Beginner' },
+    { id: 6, title: 'Database Design', instructor: 'Dr. Sunil', category: 'Database', seats: '18/40', duration: '5 Weeks', level: 'Beginner' },
+  ];
+
   useEffect(() => {
-    fetchUserData();
-  }, []);
+    if (user && user.id) {
+      fetchUserData();
+    }
+  }, [user]);
 
   const fetchUserData = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:3003/api/enrollment/user/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
-      // Fetch enrollments
-      const enrollmentsRes = await axios.get(
-        `http://localhost:3003/api/enrollment/user/${user.id}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-      
-      const userEnrollments = enrollmentsRes.data;
-      setEnrollments(userEnrollments);
-      
-      // Calculate stats
-      calculateStats(userEnrollments);
-      
-      // Fetch available courses (you can implement this)
-      // const coursesRes = await axios.get('http://localhost:3002/api/courses');
-      // setCourses(coursesRes.data);
-      
+      const data = res.data;
+      setEnrollments(data);
+      calculateStats(data);
     } catch (error) {
-      console.error('Error fetching user data:', error);
-      toast.error('Failed to load your dashboard data');
+      console.error('Error fetching enrollments:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateStats = (enrollmentsData) => {
-    const total = enrollmentsData.length;
-    const completed = enrollmentsData.filter(e => e.progress === 100).length;
-    const inProgress = enrollmentsData.filter(e => e.progress > 0 && e.progress < 100).length;
-    
-    // Calculate average progress
-    const totalProgress = enrollmentsData.reduce((sum, e) => sum + (e.progress || 0), 0);
-    const avgProgress = total > 0 ? Math.round(totalProgress / total) : 0;
-    
-    // Estimate learning hours (assuming 15 hours per course on average)
-    const totalHours = total * 15;
-    
-    setStats({
-      enrolledCourses: total,
-      completedCourses: completed,
-      inProgressCourses: inProgress,
-      totalLearningHours: totalHours,
-      certificatesEarned: completed, // Assuming certificate for completed courses
-      averageProgress: avgProgress
-    });
+  const calculateStats = (data) => {
+    const enrolled = data.length;
+    const completed = data.filter(e => e.progress === 100).length;
+    const hours = enrolled * 15; 
+    setUserStats({ enrolled, completed, hours });
   };
 
-  const handleEnroll = (courseId) => {
-    navigate(`/courses`, { state: { selectedCourseId: courseId } });
-  };
-
-  const viewAllCourses = () => {
-    navigate('/courses');
-  };
-
-  const viewMyEnrollments = () => {
-    navigate('/enrollments');
-  };
-
-  // Sample courses - replace with actual API call
-  const availableCourses = [
-    { id: 1, title: 'Node.js Fundamentals',  instructor: 'Dr. Silva',    category: 'Programming', totalSeats: 50, enrolledCount: 30 },
-    { id: 2, title: 'React.js Basics',        instructor: 'Dr. Perera',   category: 'Frontend',    totalSeats: 40, enrolledCount: 20 },
-    { id: 3, title: 'Cloud Computing',        instructor: 'Dr. Fernando', category: 'Cloud',       totalSeats: 35, enrolledCount: 15 },
-    { id: 4, title: 'Machine Learning',       instructor: 'Dr. Kamal',    category: 'AI',          totalSeats: 45, enrolledCount: 25 },
-    { id: 5, title: 'Cybersecurity',          instructor: 'Dr. Nimal',    category: 'Security',    totalSeats: 30, enrolledCount: 10 },
-    { id: 6, title: 'Database Design',        instructor: 'Dr. Sunil',    category: 'Database',    totalSeats: 40, enrolledCount: 18 },
+  const displayStats = [
+    { icon: <AutoStoriesIcon style={styles.statIcon} />, num: userStats.enrolled.toString(), lbl: 'Enrolled Courses', color: '#49BBBD' },
+    { icon: <CheckCircleOutlineIcon style={styles.statIcon} />, num: userStats.completed.toString(), lbl: 'Completed', color: '#2ecc71' },
+    { icon: <AccessTimeIcon style={styles.statIcon} />, num: `${userStats.hours}h`, lbl: 'Learning Time', color: '#f1c40f' },
   ];
-
-  // Dynamic stats based on user data
-  const userStats = [
-    { 
-      icon: <AutoStoriesIcon style={styles.statIcon} />, 
-      num: stats.enrolledCourses.toString(), 
-      lbl: 'Enrolled Courses',
-      color: '#00b4b4',
-      bgColor: '#e8fafa'
-    },
-    { 
-      icon: <CheckCircleOutlineIcon style={{ ...styles.statIcon, color: '#2e7d32' }} />, 
-      num: stats.completedCourses.toString(), 
-      lbl: 'Completed',
-      color: '#2e7d32',
-      bgColor: '#e6f7e6'
-    },
-    { 
-      icon: <AccessTimeIcon style={{ ...styles.statIcon, color: '#f39c12' }} />, 
-      num: `${stats.totalLearningHours}h`, 
-      lbl: 'Learning Time',
-      color: '#f39c12',
-      bgColor: '#fff3e0'
-    },
-    { 
-      icon: <EmojiEventsIcon style={{ ...styles.statIcon, color: '#6c63ff' }} />, 
-      num: stats.certificatesEarned.toString(), 
-      lbl: 'Certificates',
-      color: '#6c63ff',
-      bgColor: '#e8e8ff'
-    },
-  ];
-
-  // Additional stats for progress
-  const progressStats = [
-    {
-      icon: <TrendingUpIcon style={{ color: '#00b4b4' }} />,
-      label: 'In Progress',
-      value: stats.inProgressCourses,
-      color: '#00b4b4'
-    },
-    {
-      icon: <SchoolIcon style={{ color: '#6c63ff' }} />,
-      label: 'Avg. Progress',
-      value: `${stats.averageProgress}%`,
-      color: '#6c63ff'
-    }
-  ];
-
-  if (loading) {
-    return (
-      <div style={styles.loadingContainer}>
-        <div style={styles.spinner}></div>
-        <p style={styles.loadingText}>Loading your dashboard...</p>
-      </div>
-    );
-  }
 
   return (
     <div style={styles.page}>
-
-      {/* HERO BANNER with User Details */}
-      <section style={styles.banner}>
-        <div style={styles.bannerContent}>
-          <div>
+      
+      {/* HERO BANNER WITH IMAGE */}
+      <section style={styles.heroBanner}>
+        <div style={styles.overlay}>
+          <div style={styles.heroContent}>
+            <span style={styles.badge}>
+              <RocketLaunchIcon style={{ fontSize: '14px', marginRight: '5px' }} />
+              Student Dashboard
+            </span>
             <h1 style={styles.bannerTitle}>
-              Welcome back, <strong>{user?.name}</strong>!
+              Welcome back, <span style={styles.highlight}>{user?.name || 'Scholar'}</span>!
             </h1>
             <p style={styles.bannerSubtitle}>
-              {user?.email} • Student since {new Date(user?.createdAt || Date.now()).getFullYear()}
+              Continue your learning journey today
             </p>
-            <div style={styles.bannerBadges}>
-              <span style={styles.badge}>
-                <SchoolIcon style={{ fontSize: '14px', marginRight: '4px' }} />
-                Student Dashboard
-              </span>
-              {stats.enrolledCourses > 0 && (
-                <span style={{ ...styles.badge, backgroundColor: 'rgba(255,255,255,0.3)' }}>
-                  <AutoStoriesIcon style={{ fontSize: '14px', marginRight: '4px' }} />
-                  {stats.enrolledCourses} Active Enrollments
-                </span>
-              )}
-            </div>
+            <button style={styles.primaryBtn} onClick={() => navigate('/my-courses')}>
+              View My Progress
+            </button>
           </div>
-                    
         </div>
       </section>
 
-      {/* MAIN STATS ROW */}
-      <section style={styles.statsRow}>
-        {userStats.map((s, i) => (
-          <div key={i} style={styles.statCard}>
-            <div style={{ ...styles.statIconWrap, backgroundColor: s.bgColor }}>
-              {s.icon}
-            </div>
-            <div>
-              <h3 style={{ ...styles.statNum, color: s.color }}>{s.num}</h3>
-              <p style={styles.statLbl}>{s.lbl}</p>
-            </div>
-          </div>
-        ))}
-      </section>
-
-      {/* PROGRESS STATS ROW */}
-      {stats.enrolledCourses > 0 && (
-        <section style={styles.progressRow}>
-          {progressStats.map((stat, index) => (
-            <div key={index} style={styles.progressCard}>
-              <div style={{ ...styles.progressIconWrap, backgroundColor: `${stat.color}15` }}>
-                {stat.icon}
+      {/* STATS SECTION */}
+      <section style={styles.statsContainer}>
+        <div style={styles.statsRow}>
+          {displayStats.map((s, i) => (
+            <div key={i} style={styles.statCard}>
+              <div style={{ ...styles.statIconWrap, backgroundColor: `${s.color}15` }}>
+                {React.cloneElement(s.icon, { style: { ...styles.statIcon, color: s.color } })}
               </div>
               <div>
-                <p style={styles.progressLabel}>{stat.label}</p>
-                <p style={{ ...styles.progressValue, color: stat.color }}>{stat.value}</p>
+                <h3 style={styles.statNum}>{s.num}</h3>
+                <p style={styles.statLbl}>{s.lbl}</p>
               </div>
             </div>
           ))}
-        </section>
-      )}
+        </div>
+      </section>
 
       {/* AVAILABLE COURSES */}
       <section style={styles.section}>
         <div style={styles.sectionHeader}>
           <div>
-            <h2 style={styles.sectionTitle}>Available Courses</h2>
-            <p style={styles.sectionSubtitle}>Browse and enroll in new courses</p>
+            <h2 style={styles.sectionTitle}>Explore New Horizons</h2>
+            <p style={styles.sectionSubtitle}>Handpicked courses based on your interests</p>
           </div>
-          <button style={styles.viewAllBtn} onClick={viewAllCourses}>
-            View All Courses →
-          </button>
+          <button style={styles.textBtn}>View All Courses</button>
         </div>
-        
-        <div style={styles.courseGrid}>
-          {availableCourses.slice(0, 3).map(course => {
-            const availableSeats = course.totalSeats - course.enrolledCount;
-            const isEnrolled = enrollments.some(e => e.courseId === course.id.toString());
-            
-            return (
-              <div key={course.id} style={styles.courseCard}>
-                <span style={styles.courseCategory}>{course.category}</span>
-                <h3 style={styles.courseTitle}>{course.title}</h3>
 
+        <div style={styles.courseGrid}>
+          {courses.map(course => (
+            <div key={course.id} style={styles.courseCard}>
+              <div style={styles.cardHeader}>
+                <span style={styles.courseCategory}>{course.category}</span>
+                <span style={styles.levelTag}>{course.level}</span>
+              </div>
+              
+              <h3 style={styles.courseTitle}>{course.title}</h3>
+
+              <div style={styles.detailsBox}>
                 <div style={styles.metaRow}>
                   <PersonIcon style={styles.metaIcon} />
                   <span style={styles.metaText}>{course.instructor}</span>
                 </div>
-
+                <div style={styles.metaRow}>
+                  <AccessTimeIcon style={styles.metaIcon} />
+                  <span style={styles.metaText}>{course.duration}</span>
+                </div>
                 <div style={styles.metaRow}>
                   <EventSeatIcon style={styles.metaIcon} />
-                  <span style={styles.metaText}>
-                    {availableSeats} seats available
-                  </span>
+                  <span style={styles.metaText}>{course.seats} seats left</span>
                 </div>
-
-                {isEnrolled ? (
-                  <button 
-                    style={styles.enrolledBtn}
-                    onClick={() => navigate('/enrollments')}
-                  >
-                    Already Enrolled
-                  </button>
-                ) : (
-                  <button 
-                    style={styles.enrollBtn}
-                    onClick={() => handleEnroll(course.id)}
-                  >
-                    Enroll Now
-                  </button>
-                )}
               </div>
-            );
-          })}
-        </div>
 
-        {stats.enrolledCourses > 0 && (
-          <div style={styles.recentActivity}>
-            <h3 style={styles.activityTitle}>Recent Activity</h3>
-            <div style={styles.activityList}>
-              {enrollments.slice(0, 3).map(enrollment => (
-                <div key={enrollment._id} style={styles.activityItem}>
-                  <SchoolIcon style={{ color: '#00b4b4', fontSize: 20 }} />
-                  <div style={styles.activityContent}>
-                    <p style={styles.activityText}>
-                      <strong>{enrollment.courseTitle}</strong> - {enrollment.progress}% complete
-                    </p>
-                    <p style={styles.activityTime}>
-                      Enrolled: {new Date(enrollment.enrolledAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div style={{
-                    ...styles.progressIndicator,
-                    width: `${enrollment.progress}%`,
-                    backgroundColor: enrollment.progress === 100 ? '#2e7d32' : '#00b4b4'
-                  }} />
-                </div>
-              ))}
+              <button 
+                style={styles.enrollBtn}
+                onMouseOver={(e) => e.target.style.backgroundColor = '#008b8b'}
+                onMouseOut={(e) => e.target.style.backgroundColor = '#00b4b4'}
+              >
+                Enroll Now
+              </button>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
       </section>
-
     </div>
   );
 };
 
 const styles = {
   page: {
-    fontFamily: 'Segoe UI, sans-serif',
-    backgroundColor: '#f5f6fa',
+    fontFamily: "'Inter', 'Segoe UI', sans-serif",
+    backgroundColor: '#f8f9fd',
     minHeight: '100vh',
+    paddingBottom: '50px',
   },
-
-  // Loading
-  loadingContainer: {
+  heroBanner: {
+    height: '400px',
+    backgroundImage: 'url("https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=1920")',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    position: 'relative',
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    backgroundColor: '#f5f6fa',
   },
-  spinner: {
-    width: '40px',
-    height: '40px',
-    border: '3px solid #f0f0f0',
-    borderTop: '3px solid #00b4b4',
-    borderRadius: '50%',
-    animation: 'spin 0.7s linear infinite',
-    marginBottom: '16px',
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'linear-gradient(to right, rgba(0, 0, 0, 0.8) 0%, rgba(4, 176, 182, 0.5) 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0 80px',
   },
-  loadingText: {
-    color: '#888',
-    fontSize: '15px',
-  },
-
-  // Banner
-  banner: {
-    background: 'linear-gradient(135deg, #00b4b4, #007a7a)',
-    padding: '40px 60px',
+  heroContent: {
+    maxWidth: '600px',
     color: '#fff',
-  },
-  bannerContent: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    maxWidth: '1400px',
-    margin: '0 auto',
   },
   bannerTitle: {
-    fontSize: '36px',
-    fontWeight: 'normal',
-    margin: '0 0 8px',
+    fontSize: '48px',
+    fontWeight: '800',
+    margin: '15px 0',
+    lineHeight: '1.2',
+  },
+  highlight: {
+    color: '#37c9cb',
   },
   bannerSubtitle: {
-    fontSize: '15px',
+    fontSize: '18px',
     opacity: 0.9,
-    margin: '0 0 15px',
-  },
-  bannerBadges: {
-    display: 'flex',
-    gap: '10px',
+    marginBottom: '30px',
+    lineHeight: '1.6',
   },
   badge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    color: '#fff',
-    padding: '6px 16px',
-    borderRadius: '20px',
-    fontSize: '13px',
     display: 'inline-flex',
     alignItems: 'center',
-  },
-  quickActions: {
-    display: 'flex',
-    gap: '12px',
-  },
-  primaryAction: {
-    backgroundColor: '#fff',
-    color: '#00b4b4',
-    border: 'none',
-    padding: '10px 24px',
-    borderRadius: '8px',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    backdropFilter: 'blur(5px)',
+    padding: '6px 16px',
+    borderRadius: '30px',
     fontSize: '14px',
     fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
   },
-  secondaryAction: {
-    backgroundColor: 'transparent',
+  primaryBtn: {
+    padding: '14px 28px',
+    backgroundColor: '#00b4b4',
     color: '#fff',
-    border: '1.5px solid #fff',
-    padding: '10px 24px',
+    border: 'none',
     borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
+    fontWeight: 'bold',
+    fontSize: '16px',
     cursor: 'pointer',
-    transition: 'all 0.2s',
+    transition: 'transform 0.2s',
   },
-
-  // Stats
+  statsContainer: {
+  marginTop: '0',           
+  position: 'relative',
+  zIndex: 2,
+  padding: '30px 80px',    
+  backgroundColor: '#f8f9fd',
+  },
   statsRow: {
     display: 'flex',
     gap: '20px',
-    padding: '30px 60px 0',
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    maxWidth: '1400px',
-    margin: '0 auto',
   },
   statCard: {
     backgroundColor: '#fff',
-    borderRadius: '12px',
-    padding: '25px 35px',
+    borderRadius: '16px',
+    padding: '24px',
     display: 'flex',
     alignItems: 'center',
-    gap: '20px',
-    boxShadow: '0 3px 12px rgba(0,0,0,0.07)',
+    gap: '15px',
+    boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
     flex: '1',
-    minWidth: '180px',
+    minWidth: '220px',
   },
   statIconWrap: {
-    width: '55px',
-    height: '55px',
-    borderRadius: '50%',
+    width: '50px',
+    height: '50px',
+    borderRadius: '12px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
   statIcon: { fontSize: '28px' },
-  statNum: { fontSize: '28px', fontWeight: 'bold', margin: 0 },
-  statLbl: { color: '#888', fontSize: '13px', margin: 0 },
-
-  // Progress Row
-  progressRow: {
-    display: 'flex',
-    gap: '20px',
-    padding: '20px 60px 0',
-    flexWrap: 'wrap',
-    maxWidth: '1400px',
-    margin: '0 auto',
+  statNum: { fontSize: '24px', fontWeight: 'bold', color: '#1a1a1a', margin: 0 },
+  statLbl: { color: '#666', fontSize: '14px', margin: 0 },
+  section: { padding: '60px 80px' },
+  sectionHeader: { 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-end',
+    marginBottom: '40px' 
   },
-  progressCard: {
-    backgroundColor: '#fff',
-    borderRadius: '12px',
-    padding: '15px 25px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '15px',
-    boxShadow: '0 3px 12px rgba(0,0,0,0.07)',
-    flex: '1',
-  },
-  progressIconWrap: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '10px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressLabel: {
-    fontSize: '12px',
-    color: '#888',
-    margin: '0 0 4px',
-  },
-  progressValue: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    margin: 0,
-  },
-
-  // Courses Section
-  section: {
-    padding: '30px 60px 60px',
-    maxWidth: '1400px',
-    margin: '0 auto',
-  },
-  sectionHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '30px',
-  },
-  sectionTitle: {
-    fontSize: '26px',
-    color: '#2c3e50',
-    margin: 0,
-  },
-  sectionSubtitle: {
-    color: '#888',
-    fontSize: '14px',
-    marginTop: '5px',
-  },
-  viewAllBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#00b4b4',
-    fontSize: '14px',
-    fontWeight: '600',
+  sectionTitle: { fontSize: '28px', color: '#1a1a1a', margin: 0, fontWeight: '700' },
+  sectionSubtitle: { color: '#666', fontSize: '16px', marginTop: '8px' },
+  textBtn: { 
+    background: 'none', 
+    border: 'none', 
+    color: '#00b4b4', 
+    fontWeight: 'bold', 
     cursor: 'pointer',
-    padding: '8px 16px',
-    borderRadius: '6px',
-    transition: 'background-color 0.2s',
+    fontSize: '15px'
   },
-  courseGrid: {
-    display: 'flex',
-    gap: '25px',
-    flexWrap: 'wrap',
-    marginBottom: '40px',
+  courseGrid: { 
+    display: 'grid', 
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
+    gap: '30px' 
   },
   courseCard: {
     backgroundColor: '#fff',
-    borderRadius: '12px',
-    padding: '25px',
-    width: 'calc(33.333% - 17px)',
-    minWidth: '280px',
-    boxShadow: '0 3px 12px rgba(0,0,0,0.07)',
-    transition: 'transform 0.2s, box-shadow 0.2s',
+    borderRadius: '16px',
+    padding: '28px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+    transition: 'all 0.3s ease',
+    border: '1px solid #edf2f7',
+  },
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginBottom: '15px',
   },
   courseCategory: {
-    backgroundColor: '#e8fafa',
     color: '#00b4b4',
-    padding: '4px 12px',
-    borderRadius: '15px',
     fontSize: '12px',
-    display: 'inline-block',
-    marginBottom: '12px',
-    fontWeight: '600',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  levelTag: {
+    fontSize: '11px',
+    backgroundColor: '#f1f3f5',
+    padding: '2px 8px',
+    borderRadius: '4px',
+    color: '#495057',
   },
   courseTitle: {
-    fontSize: '18px',
-    color: '#2c3e50',
-    margin: '0 0 14px',
+    fontSize: '19px',
+    color: '#1a1a1a',
+    margin: '0 0 20px',
     fontWeight: '700',
+    lineHeight: '1.4',
+    height: '54px',
+    overflow: 'hidden',
+  },
+  detailsBox: {
+    borderTop: '1px solid #f1f3f5',
+    paddingTop: '15px',
+    marginBottom: '20px',
   },
   metaRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '7px',
-    marginBottom: '8px',
+    gap: '10px',
+    marginBottom: '10px',
   },
-  metaIcon: {
-    color: '#00b4b4',
-    fontSize: '16px',
-  },
-  metaText: {
-    color: '#888',
-    fontSize: '13px',
-  },
+  metaIcon: { color: '#a0aec0', fontSize: '18px' },
+  metaText: { color: '#4a5568', fontSize: '14px' },
   enrollBtn: {
     width: '100%',
     padding: '12px',
     backgroundColor: '#00b4b4',
     color: '#fff',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '10px',
     cursor: 'pointer',
-    fontWeight: 'bold',
-    fontSize: '14px',
-    marginTop: '16px',
+    fontWeight: '700',
+    fontSize: '15px',
     transition: 'background-color 0.2s',
   },
-  enrolledBtn: {
-    width: '100%',
-    padding: '12px',
-    backgroundColor: '#e0e0e0',
-    color: '#666',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-    fontSize: '14px',
-    marginTop: '16px',
-  },
-
-  // Recent Activity
-  recentActivity: {
-    backgroundColor: '#fff',
-    borderRadius: '12px',
-    padding: '25px',
-    boxShadow: '0 3px 12px rgba(0,0,0,0.07)',
-    marginTop: '30px',
-  },
-  activityTitle: {
-    fontSize: '18px',
-    color: '#2c3e50',
-    margin: '0 0 20px',
-    fontWeight: '600',
-  },
-  activityList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '15px',
-  },
-  activityItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '15px',
-    padding: '12px',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '8px',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityText: {
-    margin: '0 0 4px',
-    fontSize: '14px',
-    color: '#2c3e50',
-  },
-  activityTime: {
-    margin: 0,
-    fontSize: '12px',
-    color: '#888',
-  },
-  progressIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    height: '3px',
-    transition: 'width 0.3s ease',
-  },
 };
-
-// Add keyframes animation
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  .course-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.1);
-  }
-  .primaryAction:hover {
-    background-color: #f0f0f0;
-  }
-  .secondaryAction:hover {
-    background-color: rgba(255,255,255,0.1);
-  }
-  .viewAllBtn:hover {
-    background-color: #f0fafa;
-  }
-`;
-document.head.appendChild(styleSheet);
 
 export default StudentHome;
