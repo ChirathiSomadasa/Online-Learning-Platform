@@ -5,7 +5,6 @@ import { getAllCourses, createCourse } from '../services/courseService';
 
 import MenuBookIcon         from '@mui/icons-material/MenuBook';
 import SchoolIcon           from '@mui/icons-material/School';
-import StarRateIcon         from '@mui/icons-material/StarRate';
 import TrendingUpIcon       from '@mui/icons-material/TrendingUp';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import EditIcon             from '@mui/icons-material/Edit';
