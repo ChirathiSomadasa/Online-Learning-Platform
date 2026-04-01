@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getAllCourses } from '../services/courseService';
 
 // MUI Icons
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -12,20 +13,37 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 
 const InstructorHome = () => {
   const { user } = useAuth();
+  
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const myCourses = [
-    { id: 1, title: 'Node.js Fundamentals',  students: 28, duration: '8 Weeks',  category: 'Programming', level: 'Beginner',     status: 'Active' },
-    { id: 2, title: 'Advanced JavaScript',   students: 15, duration: '6 Weeks',  category: 'Frontend',    level: 'Advanced',     status: 'Active' },
-    { id: 3, title: 'API Design',            students: 22, duration: '5 Weeks',  category: 'Backend',     level: 'Intermediate', status: 'Draft'  },
-    { id: 4, title: 'Cloud Computing',       students: 18, duration: '10 Weeks', category: 'Cloud',       level: 'Advanced',     status: 'Active' },
-    { id: 5, title: 'React for Beginners',   students: 30, duration: '7 Weeks',  category: 'Frontend',    level: 'Beginner',     status: 'Active' },
-    { id: 6, title: 'Database Design',       students: 12, duration: '4 Weeks',  category: 'Database',    level: 'Beginner',     status: 'Draft'  },
-  ];
+  useEffect(() => {
+    const fetchCourses = async () => {
+      setLoading(true);
+      try {
+        const data = await getAllCourses();
+        // Filter courses to only show those created by the logged-in instructor
+        setCourses(data.filter(c => c.instructorId === user?._id));
+      } catch (error) {
+        console.error("Failed to fetch courses:", error);
+        setCourses([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, [user]);
+
+  // Calculate dynamic stats
+  const totalStudents = courses.reduce((s, c) => s + (c.enrolledCount || 0), 0);
+  const totalSeats = courses.reduce((s, c) => s + (c.totalSeats || 0), 0);
+  const fillRate = totalSeats > 0 ? Math.round((totalStudents / totalSeats) * 100) : 0;
 
   const stats = [
-    { icon: <MenuBookIcon  />, num: '6',   lbl: 'Total Courses',    color: '#f39c12' },
-    { icon: <SchoolIcon    />, num: '125', lbl: 'Total Students',   color: '#49BBBD' },
-    { icon: <TrendingUpIcon/>, num: '92%', lbl: 'Completion Rate',  color: '#2ecc71' },
+    { icon: <MenuBookIcon  />, num: loading ? '-' : courses.length.toString(),   lbl: 'Total Courses',  color: '#f39c12' },
+    { icon: <SchoolIcon    />, num: loading ? '-' : totalStudents.toString(),    lbl: 'Total Students', color: '#49BBBD' },
+    { icon: <TrendingUpIcon/>, num: loading ? '-' : `${fillRate}%`,              lbl: 'Fill Rate',      color: '#2ecc71' },
   ];
 
   return (
@@ -75,44 +93,54 @@ const InstructorHome = () => {
           </div>
         </div>
 
-        <div style={styles.courseGrid}>
-          {myCourses.map(course => (
-            <div key={course.id} style={styles.courseCard}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Loading your courses...</div>
+        ) : courses.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>No courses created yet.</div>
+        ) : (
+          <div style={styles.courseGrid}>
+            {courses.map(course => {
+              const isActive = (course.status || '').toLowerCase() === 'active';
 
-              {/* Card Top */}
-              <div style={styles.cardHeader}>
-                <span style={styles.courseCategory}>{course.category}</span>
-                <span style={{
-                  ...styles.statusBadge,
-                  backgroundColor: course.status === 'Active' ? '#e8fafa' : '#fff3e0',
-                  color:           course.status === 'Active' ? '#49BBBD' : '#f39c12',
-                }}>
-                  {course.status}
-                </span>
-              </div>
+              return (
+                <div key={course._id} style={styles.courseCard}>
 
-              {/* Title */}
-              <h3 style={styles.courseTitle}>{course.title}</h3>
+                  {/* Card Top */}
+                  <div style={styles.cardHeader}>
+                    <span style={styles.courseCategory}>{course.category || 'General'}</span>
+                    <span style={{
+                      ...styles.statusBadge,
+                      backgroundColor: isActive ? '#e8fafa' : '#fff3e0',
+                      color:           isActive ? '#49BBBD' : '#f39c12',
+                    }}>
+                      {course.status ? course.status.charAt(0).toUpperCase() + course.status.slice(1) : 'Draft'}
+                    </span>
+                  </div>
 
-              {/* Meta */}
-              <div style={styles.detailsBox}>
-                <div style={styles.metaRow}>
-                  <GroupIcon style={styles.metaIcon} />
-                  <span style={styles.metaText}>{course.students} Students Enrolled</span>
+                  {/* Title */}
+                  <h3 style={styles.courseTitle}>{course.title}</h3>
+
+                  {/* Meta */}
+                  <div style={styles.detailsBox}>
+                    <div style={styles.metaRow}>
+                      <GroupIcon style={styles.metaIcon} />
+                      <span style={styles.metaText}>{course.enrolledCount || 0} Students Enrolled</span>
+                    </div>
+                    <div style={styles.metaRow}>
+                      <AccessTimeIcon style={styles.metaIcon} />
+                      <span style={styles.metaText}>{course.duration || 'Self-paced'}</span>
+                    </div>
+                    <div style={styles.metaRow}>
+                      <PersonIcon style={styles.metaIcon} />
+                      <span style={styles.metaText}>Level: {course.level || 'All Levels'}</span>
+                    </div>
+                  </div>
+
                 </div>
-                <div style={styles.metaRow}>
-                  <AccessTimeIcon style={styles.metaIcon} />
-                  <span style={styles.metaText}>{course.duration}</span>
-                </div>
-                <div style={styles.metaRow}>
-                  <PersonIcon style={styles.metaIcon} />
-                  <span style={styles.metaText}>Level: {course.level}</span>
-                </div>
-              </div>
-
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
     </div>
