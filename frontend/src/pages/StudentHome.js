@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getAllCourses } from '../services/courseService';
 
 // MUI Icons
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
@@ -13,17 +14,26 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 const StudentHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const courses = [
-    { id: 1, title: 'Node.js Fundamentals', instructor: 'Dr. Silva', category: 'Programming', seats: '30/50', duration: '8 Weeks', level: 'Beginner' },
-    { id: 2, title: 'React.js Basics', instructor: 'Dr. Perera', category: 'Frontend', seats: '20/40', duration: '6 Weeks', level: 'Intermediate' },
-    { id: 3, title: 'Cloud Computing', instructor: 'Dr. Fernando', category: 'Cloud', seats: '15/35', duration: '10 Weeks', level: 'Advanced' },
-    { id: 4, title: 'Machine Learning', instructor: 'Dr. Kamal', category: 'AI', seats: '25/45', duration: '12 Weeks', level: 'Intermediate' },
-    { id: 5, title: 'Cybersecurity', instructor: 'Dr. Nimal', category: 'Security', seats: '10/30', duration: '8 Weeks', level: 'Beginner' },
-    { id: 6, title: 'Database Design', instructor: 'Dr. Sunil', category: 'Database', seats: '18/40', duration: '5 Weeks', level: 'Beginner' },
-  ];
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const data = await getAllCourses();
+        // Get only the first 6 courses to showcase on the home page
+        setCourses(data.slice(0, 6));
+      } catch (error) {
+        console.error("Failed to fetch courses:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Removed Certificates from stats
+    fetchCourses();
+  }, []);
+
   const stats = [
     { icon: <AutoStoriesIcon style={styles.statIcon} />, num: '3', lbl: 'Enrolled Courses', color: '#49BBBD' },
     { icon: <CheckCircleOutlineIcon style={styles.statIcon} />, num: '1', lbl: 'Completed', color: '#2ecc71' },
@@ -78,44 +88,57 @@ const StudentHome = () => {
             <h2 style={styles.sectionTitle}>Explore New Horizons</h2>
             <p style={styles.sectionSubtitle}>Handpicked courses based on your interests</p>
           </div>
-          <button style={styles.textBtn}>View All Courses</button>
+          {/* Linked to /courses */}
+          <button style={styles.textBtn} onClick={() => navigate('/courses')}>
+            View All Courses
+          </button>
         </div>
 
-        <div style={styles.courseGrid}>
-          {courses.map(course => (
-            <div key={course.id} style={styles.courseCard}>
-              <div style={styles.cardHeader}>
-                <span style={styles.courseCategory}>{course.category}</span>
-                <span style={styles.levelTag}>{course.level}</span>
-              </div>
-              
-              <h3 style={styles.courseTitle}>{course.title}</h3>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Loading courses...</div>
+        ) : (
+          <div style={styles.courseGrid}>
+            {courses.map(course => {
+              // Calculate available seats
+              const availableSeats = (course.totalSeats || 0) - (course.enrolledCount || 0);
 
-              <div style={styles.detailsBox}>
-                <div style={styles.metaRow}>
-                  <PersonIcon style={styles.metaIcon} />
-                  <span style={styles.metaText}>{course.instructor}</span>
-                </div>
-                <div style={styles.metaRow}>
-                  <AccessTimeIcon style={styles.metaIcon} />
-                  <span style={styles.metaText}>{course.duration}</span>
-                </div>
-                <div style={styles.metaRow}>
-                  <EventSeatIcon style={styles.metaIcon} />
-                  <span style={styles.metaText}>{course.seats} seats left</span>
-                </div>
-              </div>
+              return (
+                <div key={course._id} style={styles.courseCard}>
+                  <div style={styles.cardHeader}>
+                    <span style={styles.courseCategory}>{course.category || 'General'}</span>
+                    <span style={styles.levelTag}>{course.level || 'All Levels'}</span>
+                  </div>
+                  
+                  <h3 style={styles.courseTitle}>{course.title}</h3>
 
-              <button 
-                style={styles.enrollBtn}
-                onMouseOver={(e) => e.target.style.backgroundColor = '#008b8b'}
-                onMouseOut={(e) => e.target.style.backgroundColor = '#00b4b4'}
-              >
-                Enroll Now
-              </button>
-            </div>
-          ))}
-        </div>
+                  <div style={styles.detailsBox}>
+                    <div style={styles.metaRow}>
+                      <PersonIcon style={styles.metaIcon} />
+                      <span style={styles.metaText}>{course.instructor || 'TBA'}</span>
+                    </div>
+                    <div style={styles.metaRow}>
+                      <AccessTimeIcon style={styles.metaIcon} />
+                      <span style={styles.metaText}>{course.duration || 'Self-paced'}</span>
+                    </div>
+                    <div style={styles.metaRow}>
+                      <EventSeatIcon style={styles.metaIcon} />
+                      <span style={styles.metaText}>{availableSeats > 0 ? `${availableSeats} seats left` : 'Course Full'}</span>
+                    </div>
+                  </div>
+
+                  <button 
+                    style={styles.enrollBtn}
+                    onMouseOver={(e) => e.target.style.backgroundColor = '#008b8b'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = '#00b4b4'}
+                    onClick={() => navigate(`/enroll/${course._id}`)}
+                  >
+                    Enroll Now
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -191,11 +214,11 @@ const styles = {
     transition: 'transform 0.2s',
   },
   statsContainer: {
-  marginTop: '0',           
-  position: 'relative',
-  zIndex: 2,
-  padding: '30px 80px',    
-  backgroundColor: '#f8f9fd',
+    marginTop: '0',           
+    position: 'relative',
+    zIndex: 2,
+    padding: '30px 80px',    
+    backgroundColor: '#f8f9fd',
   },
   statsRow: {
     display: 'flex',
