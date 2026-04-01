@@ -58,6 +58,16 @@ const sortCourses = (list, key) => {
   }
 };
 
+// Helper function to generate a consistent pseudo-random 1-5 rating based on the instructor's name
+const getInstructorStars = (name) => {
+  if (!name) return 5;
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash += name.charCodeAt(i);
+  }
+  return (hash % 5) + 1; // Ensures a number between 1 and 5
+};
+
 // A searchable popover that handles 100s of categories gracefully
 const CategoryPicker = ({ categories, value, onChange }) => {
   const [open, setOpen]         = useState(false);
@@ -621,30 +631,41 @@ const Courses = () => {
               <h2 style={styles.sectionTitle}>Our Expert Instructors</h2>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'center' }}>
-              {instructorList.map(([name, courseList], i) => (
-                <div key={i} style={styles.instructorCard} className="instructor-card">
-                  <div style={{ ...styles.instructorAvatar, background: THEME_GRADIENT }}>
-                    <PersonIcon style={{ fontSize: '36px', color: '#fff' }} />
+              {instructorList.map(([name, courseList], i) => {
+                const numStars = getInstructorStars(name);
+                return (
+                  <div key={i} style={styles.instructorCard} className="instructor-card">
+                    <div style={{ ...styles.instructorAvatar, background: THEME_GRADIENT }}>
+                      <PersonIcon style={{ fontSize: '36px', color: '#fff' }} />
+                    </div>
+                    <h3 style={styles.instructorName}>{name}</h3>
+                    <p style={{ fontSize: '13px', color: THEME_ACCENT, fontWeight: '600', margin: '0 0 12px' }}>
+                      {courseList.length} Course{courseList.length !== 1 ? 's' : ''}
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                      {courseList.slice(0, 3).map((title, j) => (
+                        <span key={j} style={{ backgroundColor: THEME_ICON_BG, color: THEME_ACCENT, padding: '4px 10px', borderRadius: '10px', fontSize: '11px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {title}
+                        </span>
+                      ))}
+                      {courseList.length > 3 && (
+                        <span style={{ fontSize: '11px', color: '#bbb', textAlign: 'center' }}>+{courseList.length - 3} more</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '2px' }}>
+                      {[...Array(5)].map((_, k) => (
+                        <StarIcon 
+                          key={k} 
+                          style={{ 
+                            color: k < numStars ? '#ffd700' : '#e0e0e0', 
+                            fontSize: '16px' 
+                          }} 
+                        />
+                      ))}
+                    </div>
                   </div>
-                  <h3 style={styles.instructorName}>{name}</h3>
-                  <p style={{ fontSize: '13px', color: THEME_ACCENT, fontWeight: '600', margin: '0 0 12px' }}>
-                    {courseList.length} Course{courseList.length !== 1 ? 's' : ''}
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
-                    {courseList.slice(0, 3).map((title, j) => (
-                      <span key={j} style={{ backgroundColor: THEME_ICON_BG, color: THEME_ACCENT, padding: '4px 10px', borderRadius: '10px', fontSize: '11px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {title}
-                      </span>
-                    ))}
-                    {courseList.length > 3 && (
-                      <span style={{ fontSize: '11px', color: '#bbb', textAlign: 'center' }}>+{courseList.length - 3} more</span>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '2px' }}>
-                    {[...Array(5)].map((_, k) => <StarIcon key={k} style={{ color: '#ffd700', fontSize: '16px' }} />)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
