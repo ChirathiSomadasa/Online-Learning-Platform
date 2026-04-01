@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAllCourses } from '../services/courseService';
 
@@ -8,11 +9,13 @@ import SchoolIcon from '@mui/icons-material/School';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import GroupIcon from '@mui/icons-material/Group';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import PersonIcon from '@mui/icons-material/Person';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 const InstructorHome = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +25,6 @@ const InstructorHome = () => {
       setLoading(true);
       try {
         const data = await getAllCourses();
-        // Filter courses to only show those created by the logged-in instructor
         setCourses(data.filter(c => c.instructorId === user?._id));
       } catch (error) {
         console.error("Failed to fetch courses:", error);
@@ -43,7 +45,7 @@ const InstructorHome = () => {
   const stats = [
     { icon: <MenuBookIcon  />, num: loading ? '-' : courses.length.toString(),   lbl: 'Total Courses',  color: '#f39c12' },
     { icon: <SchoolIcon    />, num: loading ? '-' : totalStudents.toString(),    lbl: 'Total Students', color: '#49BBBD' },
-    { icon: <TrendingUpIcon/>, num: loading ? '-' : `${fillRate}%`,              lbl: 'Fill Rate',      color: '#2ecc71' },
+    { icon: <TrendingUpIcon/>, num: loading ? '-' : `${fillRate}%`,              lbl: 'Overall Fill Rate', color: '#2ecc71' },
   ];
 
   return (
@@ -61,7 +63,7 @@ const InstructorHome = () => {
               Welcome back, <span style={styles.highlight}>{user?.name || 'Instructor'}</span>!
             </h1>
             <p style={styles.bannerSubtitle}>
-              Manage your courses and inspire students every day
+              Manage your courses, track enrollments, and inspire students.
             </p>
           </div>
         </div>
@@ -88,8 +90,8 @@ const InstructorHome = () => {
       <section style={styles.section}>
         <div style={styles.sectionHeader}>
           <div>
-            <h2 style={styles.sectionTitle}>My Courses</h2>
-            <p style={styles.sectionSubtitle}>Courses you are currently teaching</p>
+            <h2 style={styles.sectionTitle}>My Courses Overview</h2>
+            <p style={styles.sectionSubtitle}>Monitor and manage the courses you are currently teaching</p>
           </div>
         </div>
 
@@ -101,6 +103,14 @@ const InstructorHome = () => {
           <div style={styles.courseGrid}>
             {courses.map(course => {
               const isActive = (course.status || '').toLowerCase() === 'active';
+              const createdDate = new Date(course.createdAt).toLocaleDateString(undefined, { 
+                year: 'numeric', month: 'short', day: 'numeric' 
+              });
+              
+              const enrolled = course.enrolledCount || 0;
+              const capacity = course.totalSeats || 50;
+              const fillPercentage = capacity > 0 ? Math.min(Math.round((enrolled / capacity) * 100), 100) : 0;
+              const isFull = fillPercentage >= 100;
 
               return (
                 <div key={course._id} style={styles.courseCard}>
@@ -117,22 +127,45 @@ const InstructorHome = () => {
                     </span>
                   </div>
 
-                  {/* Title */}
+                  {/* Title & Description Snippet */}
                   <h3 style={styles.courseTitle}>{course.title}</h3>
+                  <p style={styles.courseDescription}>
+                    {course.description && course.description.length > 80 
+                      ? `${course.description.substring(0, 80)}...` 
+                      : course.description || 'No description provided.'}
+                  </p>
 
-                  {/* Meta */}
+                  {/* Meta Using Valid DB Schema Fields */}
                   <div style={styles.detailsBox}>
-                    <div style={styles.metaRow}>
-                      <GroupIcon style={styles.metaIcon} />
-                      <span style={styles.metaText}>{course.enrolledCount || 0} Students Enrolled</span>
+                    
+                    {/* Capacity Progress Bar */}
+                    <div style={{ ...styles.metaRow, alignItems: 'flex-start', marginBottom: '14px' }}>
+                      <GroupIcon style={{...styles.metaIcon, marginTop: '2px'}} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={styles.metaText}>{enrolled} / {capacity} Students</span>
+                          <span style={{ fontSize: '12px', fontWeight: '700', color: isFull ? '#e74c3c' : '#49BBBD' }}>
+                            {fillPercentage}%
+                          </span>
+                        </div>
+                        <div style={styles.progressBarBg}>
+                          <div style={{ 
+                            ...styles.progressBarFill, 
+                            width: `${fillPercentage}%`,
+                            backgroundColor: isFull ? '#e74c3c' : '#49BBBD'
+                          }} />
+                        </div>
+                      </div>
                     </div>
+
                     <div style={styles.metaRow}>
                       <AccessTimeIcon style={styles.metaIcon} />
                       <span style={styles.metaText}>{course.duration || 'Self-paced'}</span>
                     </div>
+                    
                     <div style={styles.metaRow}>
-                      <PersonIcon style={styles.metaIcon} />
-                      <span style={styles.metaText}>Level: {course.level || 'All Levels'}</span>
+                      <CalendarTodayIcon style={styles.metaIcon} />
+                      <span style={styles.metaText}>Created: {createdDate}</span>
                     </div>
                   </div>
 
@@ -269,6 +302,8 @@ const styles = {
     padding: '26px',
     boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
     border: '1px solid #edf2f7',
+    display: 'flex',
+    flexDirection: 'column',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
   },
   cardHeader: {
@@ -293,24 +328,62 @@ const styles = {
   courseTitle: {
     fontSize: '18px',
     color: '#1a1a1a',
-    margin: '0 0 18px',
+    margin: '0 0 8px',
     fontWeight: '700',
     lineHeight: '1.4',
-    height: '52px',
-    overflow: 'hidden',
+  },
+  courseDescription: {
+    fontSize: '13px',
+    color: '#718096',
+    margin: '0 0 16px',
+    lineHeight: '1.5',
+    minHeight: '38px',
   },
   detailsBox: {
     borderTop: '1px solid #f1f3f5',
-    paddingTop: '14px',
+    paddingTop: '16px',
+    marginBottom: '20px',
+    flex: 1,
   },
   metaRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    marginBottom: '10px',
+    marginBottom: '12px',
   },
   metaIcon: { color: '#a0aec0', fontSize: '17px' },
-  metaText: { color: '#4a5568', fontSize: '14px' },
+  metaText: { color: '#4a5568', fontSize: '13px', fontWeight: '500' },
+  
+  // PROGRESS BAR
+  progressBarBg: {
+    height: '6px',
+    backgroundColor: '#edf2f7',
+    borderRadius: '4px',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: '4px',
+    transition: 'width 0.4s ease',
+  },
+
+  // ACTIONS
+  manageBtn: {
+    width: '100%',
+    padding: '12px',
+    backgroundColor: '#fff',
+    color: '#4a5568',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    fontWeight: '600',
+    fontSize: '14px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    transition: 'background-color 0.2s',
+  }
 };
 
 export default InstructorHome;

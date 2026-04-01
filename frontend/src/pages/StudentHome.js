@@ -106,7 +106,6 @@ const StudentHome = () => {
                 <div key={course._id} style={styles.courseCard}>
                   <div style={styles.cardHeader}>
                     <span style={styles.courseCategory}>{course.category || 'General'}</span>
-                    <span style={styles.levelTag}>{course.level || 'All Levels'}</span>
                   </div>
                   
                   <h3 style={styles.courseTitle}>{course.title}</h3>
