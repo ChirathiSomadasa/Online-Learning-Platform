@@ -9,9 +9,8 @@ import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import StudentHome from './pages/StudentHome';
 import InstructorHome from './pages/InstructorHome';
-import Courses from './pages/Courses'; 
-import MyCourses from './pages/MyCourses';
-
+import NotificationsPage from './pages/NotificationsPage';
+import ForgotPassword from './pages/ForgotPassword';
 // Layout WITH header and footer
 const WithLayout = ({ children }) => (
   <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -29,14 +28,14 @@ function App() {
           {/* NO header/footer */}
           <Route path="/login"  element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot" element={<ForgotPassword />} />
 
           {/* WITH header and footer */}
           <Route path="/" element={<WithLayout><Home /></WithLayout>} />
           <Route path="/profile" element={<WithLayout><Profile /></WithLayout>} />
           <Route path="/student-home" element={<WithLayout><StudentHome /></WithLayout>} />
           <Route path="/instructor-home" element={<WithLayout><InstructorHome /></WithLayout>} />
-          <Route path="/courses"         element={<WithLayout><Courses /></WithLayout>} />     
-          <Route path="/my-courses"      element={<WithLayout><MyCourses /></WithLayout>} /> 
+          <Route path="/notifications" element={<WithLayout><NotificationsPage /></WithLayout>} />
         </Routes>
       </Router>
     </AuthProvider>

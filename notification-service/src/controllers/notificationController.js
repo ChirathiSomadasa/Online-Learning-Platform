@@ -13,18 +13,22 @@ const buildHTML = (data) => {
     return `<h2>Welcome!</h2><p>Hi ${data.userName}, welcome to the Online Learning Platform!</p>`
   if (data.type === 'enrollment_confirmation')
     return `<h2>Enrolled!</h2>
- <p>Hi ${data.userName},</p>
- <p>You are enrolled in <b>${data.courseTitle}</b> by ${data.instructor}.</p>
- <p>Enrollment ID: ${data.enrollmentId}</p>`
+
+  <p>Hi ${data.userName},</p>
+  <p>You are enrolled in <b>${data.courseTitle}</b> by ${data.instructor}.</p>
+  <p>Enrollment ID: ${data.enrollmentId}</p>`
+
   if (data.type === 'new_course')
     return `<h2>New Course!</h2>
- <p><b>${data.courseTitle}</b> by ${data.instructor} is now available.</p>`
+
+  <p><b>${data.courseTitle}</b> by ${data.instructor} is now available.</p>`
   return `<p>${data.message || 'Notification from Online Learning Platform'}</p>`
 }
 
 // POST /api/notifications/send — called by Student 1, 2, and 3
 exports.sendNotification = async (req, res) => {
   const log = await Notification.create({ ...req.body, status: 'pending' })
+
   try {
     if (req.body.to && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       await getTransporter().sendMail({
@@ -41,6 +45,7 @@ exports.sendNotification = async (req, res) => {
     }
     await Notification.findByIdAndUpdate(log._id, { status: 'sent' })
     res.json({ message: 'Notification sent', id: log._id })
+    
   } catch (err) {
     await Notification.findByIdAndUpdate(log._id, { status: 'failed' })
     res.status(500).json({ message: 'Failed', error: err.message })

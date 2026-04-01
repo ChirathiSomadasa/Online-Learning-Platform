@@ -10,7 +10,7 @@ const Footer = () => {
         <div style={styles.section}>
           <h3 style={styles.title}>
             <SchoolIcon style={styles.titleIcon} />
-            Online Learning Platform
+            EduNest
           </h3>
           <p style={styles.text}>Empowering learners through quality education.</p>
         </div>

@@ -1,11 +1,12 @@
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
+const enrollmentRoutes = require('./routes/enrollmentRoutes');
 const swaggerUi = require('swagger-ui-express');
 const yaml = require('js-yaml');
 const fs = require('fs');
 const path = require('path');
-const notificationRoutes = require('./routes/notificationRoutes');
+
 const app = express();
 
 app.use(helmet());
@@ -18,8 +19,10 @@ const swaggerDoc = yaml.load(
 );
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 
+// Routes
+app.use('/api/enrollment', enrollmentRoutes);
 
-app.use('/api/notifications', notificationRoutes);
-app.get('/health', (req, res) => res.json({ status: 'ok', service: 'notificationservice' }));
+// Health check
+app.get('/health', (req, res) => res.json({ status: 'ok', service: 'enrollment-service' }));
 
 module.exports = app;
