@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest --testPathPatterns=tests/ --forceExit"
+    "test": "jest --testPathPatterns=tests/ --forceExit",
+    "test:coverage": "jest --testPathPatterns=tests/ --forceExit --coverage"
   },
   "keywords": [],
   "author": "",
