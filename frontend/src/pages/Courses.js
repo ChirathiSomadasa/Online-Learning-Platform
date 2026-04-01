@@ -41,7 +41,7 @@ const FAQS = [
 
 const THEME_GRADIENT = 'linear-gradient(135deg, #00a89d 0%, #006060 100%)';
 const THEME_ACCENT = '#00a89d';
-const THEME_ICON_BG = '#e8faf9'; // Very light teal for icon backgrounds
+const THEME_ICON_BG = '#e8faf9'; 
 
 const sortCourses = (list, key) => {
   const copy = [...list];
@@ -379,7 +379,7 @@ const Courses = () => {
           <div style={styles.blob1} /><div style={styles.blob2} />
           <div style={styles.heroInner}>
             <div style={styles.heroLeft}>
-              <span style={styles.heroEyebrow}>{user ? `Welcome back, ${user.name}!` : 'Start Learning Today'}</span>
+              <span style={styles.heroEyebrow}>{'Start Learning Today'}</span>
               <h1 style={styles.heroTitle}>Elevate Your Potential<br />With E-Learning</h1>
               <p style={styles.heroSub}>
                 Discover expert-led courses tailored to your goals. Learn at your own pace
