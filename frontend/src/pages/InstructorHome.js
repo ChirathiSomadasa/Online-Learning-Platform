@@ -5,13 +5,12 @@ import { getAllCourses } from '../services/courseService';
 
 // MUI Icons
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-import SchoolIcon from '@mui/icons-material/School';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import EventSeatIcon from '@mui/icons-material/EventSeat';
 import GroupIcon from '@mui/icons-material/Group';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import SettingsIcon from '@mui/icons-material/Settings';
 
 const InstructorHome = () => {
   const { user } = useAuth();
@@ -37,15 +36,30 @@ const InstructorHome = () => {
     fetchCourses();
   }, [user]);
 
-  // Calculate dynamic stats
-  const totalStudents = courses.reduce((s, c) => s + (c.enrolledCount || 0), 0);
-  const totalSeats = courses.reduce((s, c) => s + (c.totalSeats || 0), 0);
-  const fillRate = totalSeats > 0 ? Math.round((totalStudents / totalSeats) * 100) : 0;
+  // Calculate instructor stats
+  const totalEnrollments = courses.reduce((s, c) => s + (c.enrolledCount || 0), 0);
+  const totalCapacity = courses.reduce((s, c) => s + (c.totalSeats || 0), 0);
+  const availableSeats = totalCapacity > totalEnrollments ? totalCapacity - totalEnrollments : 0;
 
   const stats = [
-    { icon: <MenuBookIcon  />, num: loading ? '-' : courses.length.toString(),   lbl: 'Total Courses',  color: '#f39c12' },
-    { icon: <SchoolIcon    />, num: loading ? '-' : totalStudents.toString(),    lbl: 'Total Students', color: '#49BBBD' },
-    { icon: <TrendingUpIcon/>, num: loading ? '-' : `${fillRate}%`,              lbl: 'Overall Fill Rate', color: '#2ecc71' },
+    { 
+      icon: <MenuBookIcon />, 
+      num: loading ? '-' : courses.length.toString(),  
+      lbl: 'Total Courses Created',  
+      color: '#f39c12' 
+    },
+    { 
+      icon: <EventSeatIcon />, 
+      num: loading ? '-' : availableSeats.toString(),    
+      lbl: 'Available Seats', 
+      color: '#2ecc71' 
+    },
+    { 
+      icon: <PeopleAltIcon />, 
+      num: loading ? '-' : totalEnrollments.toString(),              
+      lbl: 'Total Enrollments', 
+      color: '#49BBBD' 
+    },
   ];
 
   return (
@@ -366,24 +380,6 @@ const styles = {
     borderRadius: '4px',
     transition: 'width 0.4s ease',
   },
-
-  // ACTIONS
-  manageBtn: {
-    width: '100%',
-    padding: '12px',
-    backgroundColor: '#fff',
-    color: '#4a5568',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    fontWeight: '600',
-    fontSize: '14px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    transition: 'background-color 0.2s',
-  }
 };
 
 export default InstructorHome;

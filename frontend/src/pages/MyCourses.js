@@ -917,6 +917,7 @@ const styles = {
   emptyText:   { fontSize: '20px', color: '#1e293b', fontWeight: '700', marginBottom: '8px' },
   emptyHint:   { fontSize: '15px', color: '#64748b' },
 
+
   tableWrap: { overflow: 'hidden', paddingBottom: '20px' },
   table:     { width: '100%', borderCollapse: 'separate', borderSpacing: '0 12px', tableLayout: 'fixed' },
   th: { padding: '10px 12px', textAlign: 'left', borderBottom: 'none' },
