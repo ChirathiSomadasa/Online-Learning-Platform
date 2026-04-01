@@ -23,14 +23,13 @@ import ChevronLeftIcon   from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon  from '@mui/icons-material/ChevronRight';
 import bannerGirl from '../images/course/course_girl.png';
 
-
 const CARDS_PER_PAGE = 6; 
 
 const SORT_OPTIONS = [
   { value: 'popular',  label: 'Most Popular',  icon: 'trending' },
-  { value: 'newest',   label: 'Newest First',   icon: 'new' },
+  { value: 'newest',   label: 'Newest First',  icon: 'new' },
   { value: 'seats',    label: 'Most Available', icon: 'seats' },
-  { value: 'az',       label: 'Alphabetical Order',           icon: 'az' },
+  { value: 'az',       label: 'Alphabetical Order',          icon: 'az' },
 ];
 
 const FAQS = [
@@ -39,18 +38,10 @@ const FAQS = [
   { q: 'How do I contact my instructor?', a: 'Once enrolled, you can reach your instructor through the course discussion board or the in-platform messaging system available in your student dashboard.' },
 ];
 
-const CARD_GRADIENTS = [
-  'linear-gradient(135deg, #04c8c8 0%, #0b4a48 100%)',
-  'linear-gradient(135deg, #3a7fb1 0%, #023d52 100%)',
-  'linear-gradient(135deg, #f2b66c 0%, #c15b28 100%)',
-  'linear-gradient(135deg, #43b89c 0%, #1d7a60 100%)',
-  'linear-gradient(135deg, #e4c490 0%, #ab6c05 100%)',
-  'linear-gradient(135deg, #6b90e7 0%, #273e70 100%)',
-];
 
-const CARD_ICON_BG  = ['rgba(0,180,180,0.15)','rgba(108,99,255,0.15)','rgba(247,151,30,0.15)','rgba(67,184,156,0.15)','rgba(209, 187, 21, 0.15)','rgba(71,118,230,0.15)'];
-const CARD_ACCENT   = ['#00b4b4','#6c63ff','#f7971e','#43b89c','#e4c490','#4776e6'];
-
+const THEME_GRADIENT = 'linear-gradient(135deg, #00a89d 0%, #006060 100%)';
+const THEME_ACCENT = '#00a89d';
+const THEME_ICON_BG = '#e8faf9'; // Very light teal for icon backgrounds
 
 const sortCourses = (list, key) => {
   const copy = [...list];
@@ -68,7 +59,6 @@ const sortCourses = (list, key) => {
 };
 
 // A searchable popover that handles 100s of categories gracefully
-
 const CategoryPicker = ({ categories, value, onChange }) => {
   const [open, setOpen]         = useState(false);
   const [query, setQuery]       = useState('');
@@ -322,10 +312,11 @@ const Courses = () => {
   const handleEnroll = () => { navigate(`/enroll/${selected._id}`); };
 
   const seatPct        = (c)   => c.totalSeats > 0 ? Math.min(100, (c.enrolledCount / c.totalSeats) * 100) : 0;
-  const seatColor      = (pct) => pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00b4b4';
   const availLabel     = (pct) => pct >= 90 ? 'Almost Full' : pct >= 70 ? 'Filling Up' : 'Open';
   const availBg        = (pct) => pct >= 90 ? '#fdecea' : pct >= 70 ? '#fff8e1' : '#e8faf9';
   const availFg        = (pct) => pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00a89d';
+  const seatColor      = (pct) => pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00a89d';
+
 
   const instructorMap  = courses.reduce((acc, c) => {
     if (!c.instructor) return acc;
@@ -334,10 +325,6 @@ const Courses = () => {
     return acc;
   }, {});
   const instructorList = Object.entries(instructorMap);
-
-  const modalCardIdx   = selected ? courses.findIndex(c => c._id === selected._id) : 0;
-  const modalGrad      = CARD_GRADIENTS[modalCardIdx % CARD_GRADIENTS.length] || CARD_GRADIENTS[0];
-  const modalAccent    = CARD_ACCENT[modalCardIdx % CARD_ACCENT.length]       || CARD_ACCENT[0];
 
   const topCourse = courses.length > 0
     ? [...courses].sort((a, b) => (b.enrolledCount || 0) - (a.enrolledCount || 0))[0]
@@ -356,7 +343,7 @@ const Courses = () => {
         @keyframes shimmer   { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
         @keyframes pulseRing { 0%{box-shadow:0 0 0 0 rgba(0,180,180,0.35);} 70%{box-shadow:0 0 0 10px rgba(0,180,180,0);} 100%{box-shadow:0 0 0 0 rgba(0,180,180,0);} }
 
-        .ccard { animation: fadeInUp 0.42s ease forwards; opacity:0; transition:transform 0.24s ease,box-shadow 0.24s ease; }
+        .ccard { animation: fadeInUp 0.42s ease forwards; opacity:0; transition:transform 0.24s ease,box-shadow 0.24s ease; display: flex; flex-direction: column;}
         .ccard:hover { transform:translateY(-7px); box-shadow:0 22px 50px rgba(0,0,0,0.12) !important; }
         .ccard:hover .ccard-reveal { max-height:70px; opacity:1; }
         .ccard:hover .ccard-banner-overlay { opacity:0.55; }
@@ -402,7 +389,7 @@ const Courses = () => {
                 <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '24px' }}>
                   {[
                     { label: `${courses.length} Courses`, color: '#00a89d' },
-                    { label: `${categories.length} Categories`, color: '#6c63ff' },
+                    { label: `${categories.length} Categories`, color: '#006060' },
                   ].map((s, i) => (
                     <span key={i} style={{ backgroundColor: '#fff', color: s.color, padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
                       {s.label}
@@ -443,7 +430,7 @@ const Courses = () => {
         {!loading && topCourse && (
           <div style={{ padding: '0 60px', marginTop: '-10px', marginBottom: '0' }}>
             <div style={{
-              background: 'linear-gradient(135deg, #004040 0%, #006060 60%, #00a89d 100%)',
+              background: THEME_GRADIENT,
               borderRadius: '18px', padding: '22px 28px',
               display: 'flex', alignItems: 'center', gap: '18px',
               boxShadow: '0 10px 32px rgba(0,100,100,0.2)',
@@ -560,11 +547,7 @@ const Courses = () => {
 
               <div style={styles.grid}>
                 {paginated.map((course, idx) => {
-                  const globalIdx = courses.findIndex(c => c._id === course._id);
                   const pct       = seatPct(course);
-                  const accent    = CARD_ACCENT[globalIdx % CARD_ACCENT.length];
-                  const grad      = CARD_GRADIENTS[globalIdx % CARD_GRADIENTS.length];
-                  const iconBg    = CARD_ICON_BG[globalIdx % CARD_ICON_BG.length];
                   const available = (course.totalSeats || 0) - (course.enrolledCount || 0);
                   const isTop     = sortBy === 'popular' && idx === 0 && safePage === 1;
 
@@ -577,7 +560,7 @@ const Courses = () => {
                         </div>
                       )}
 
-                      <div style={{ ...styles.cardBanner, background: grad }}>
+                      <div style={{ ...styles.cardBanner, background: THEME_GRADIENT }}>
                         <svg className="ccard-banner-overlay" viewBox="0 0 340 100" preserveAspectRatio="none"
                           style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '100%', opacity: 0.4 }}>
                           <path d="M0,60 C80,90 160,30 240,70 C300,100 340,50 340,50 L340,100 L0,100 Z" fill="rgba(255,255,255,0.18)" />
@@ -593,50 +576,30 @@ const Courses = () => {
                       </div>
 
                       <div style={styles.cardBody}>
+                        {/* Simplified preview - removed description */}
                         <h3 style={styles.courseTitle}>{course.title}</h3>
-                        <p style={styles.description}>{course.description}</p>
-                        <div className="ccard-reveal" style={{ fontSize: '12px', color: '#999', lineHeight: '1.6', marginBottom: '4px' }}>
-                          Click "View Details" for full course info and enrollment options.
+                        
+                        <div className="ccard-reveal" style={{ fontSize: '12px', color: '#999', lineHeight: '1.6', marginBottom: '10px' }}>
+                          Click "View Details" to see the full course description and enrollment options.
                         </div>
 
-                        {(course.enrolledCount || 0) > 0 && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px' }}>
-                            <TrendingUpIcon style={{ fontSize: '13px', color: '#f7971e' }} />
-                            <span style={{ fontSize: '11px', color: '#f7971e', fontWeight: '700' }}>
-                              {course.enrolledCount} student{course.enrolledCount !== 1 ? 's' : ''} enrolled
-                            </span>
-                          </div>
-                        )}
-
+                        {/* Kept only essential browsing chips */}
                         <div style={styles.metaChips}>
-                          <span style={{ ...styles.metaChip, backgroundColor: iconBg, color: accent }}>
+                          <span style={{ ...styles.metaChip, backgroundColor: THEME_ICON_BG, color: THEME_ACCENT }}>
                             <PersonIcon style={{ fontSize: '13px' }} />{course.instructor}
                           </span>
                           {course.duration && (
-                            <span style={{ ...styles.metaChip, backgroundColor: '#f3f0ff', color: '#6c63ff' }}>
+                            <span style={{ ...styles.metaChip, backgroundColor: THEME_ICON_BG, color: THEME_ACCENT }}>
                               <AccessTimeIcon style={{ fontSize: '13px' }} />{course.duration}
                             </span>
                           )}
-                          <span style={{ ...styles.metaChip, backgroundColor: '#fff8e1', color: '#e0a020' }}>
+                           <span style={{ ...styles.metaChip, backgroundColor: '#fff8e1', color: '#e0a020' }}>
                             <EventSeatIcon style={{ fontSize: '13px' }} />{available} left
                           </span>
                         </div>
 
-                        <div style={styles.progressSection}>
-                          <div style={styles.progressLabel}>
-                            <span style={{ fontSize: '12px', color: '#999' }}>Enrollment</span>
-                            <span style={{ fontSize: '12px', fontWeight: '700', color: accent }}>
-                              {course.enrolledCount || 0}/{course.totalSeats || 0}
-                            </span>
-                          </div>
-                          <div style={styles.progressTrack}>
-                            <div style={{ height: '100%', borderRadius: '999px', width: `${pct}%`, background: grad, transition: 'width 0.6s ease', position: 'relative', overflow: 'hidden' }}>
-                              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)', backgroundSize: '400px 100%', animation: 'shimmer 2.2s infinite' }} />
-                            </div>
-                          </div>
-                        </div>
-
-                        <button className="view-btn" style={{ ...styles.viewBtn, background: grad }}
+                        {/* View button pushed to bottom */}
+                        <button className="view-btn" style={{ ...styles.viewBtn, background: THEME_GRADIENT, marginTop: 'auto' }}
                           onClick={() => openDetail(course._id)}>
                           View Details
                         </button>
@@ -660,16 +623,16 @@ const Courses = () => {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'center' }}>
               {instructorList.map(([name, courseList], i) => (
                 <div key={i} style={styles.instructorCard} className="instructor-card">
-                  <div style={{ ...styles.instructorAvatar, background: CARD_GRADIENTS[i % CARD_GRADIENTS.length] }}>
+                  <div style={{ ...styles.instructorAvatar, background: THEME_GRADIENT }}>
                     <PersonIcon style={{ fontSize: '36px', color: '#fff' }} />
                   </div>
                   <h3 style={styles.instructorName}>{name}</h3>
-                  <p style={{ fontSize: '13px', color: CARD_ACCENT[i % CARD_ACCENT.length], fontWeight: '600', margin: '0 0 12px' }}>
+                  <p style={{ fontSize: '13px', color: THEME_ACCENT, fontWeight: '600', margin: '0 0 12px' }}>
                     {courseList.length} Course{courseList.length !== 1 ? 's' : ''}
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
                     {courseList.slice(0, 3).map((title, j) => (
-                      <span key={j} style={{ backgroundColor: CARD_ICON_BG[i % CARD_ICON_BG.length], color: CARD_ACCENT[i % CARD_ACCENT.length], padding: '4px 10px', borderRadius: '10px', fontSize: '11px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span key={j} style={{ backgroundColor: THEME_ICON_BG, color: THEME_ACCENT, padding: '4px 10px', borderRadius: '10px', fontSize: '11px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {title}
                       </span>
                     ))}
@@ -678,7 +641,7 @@ const Courses = () => {
                     )}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '2px' }}>
-                    {[...Array(5)].map((_, k) => <StarIcon key={k} style={{ color: CARD_ACCENT[i % CARD_ACCENT.length], fontSize: '16px' }} />)}
+                    {[...Array(5)].map((_, k) => <StarIcon key={k} style={{ color: '#ffd700', fontSize: '16px' }} />)}
                   </div>
                 </div>
               ))}
@@ -715,7 +678,7 @@ const Courses = () => {
       {modalOpen && (
         <div style={styles.overlay} onClick={e => { if (e.target === e.currentTarget) closeModal(); }}>
           <div style={styles.modal} className="modal-anim">
-            <div style={{ height: '90px', borderRadius: '16px 16px 0 0', background: modalLoading ? CARD_GRADIENTS[0] : modalGrad, display: 'flex', alignItems: 'center', padding: '0 24px', gap: '14px', flexShrink: 0 }}>
+            <div style={{ height: '90px', borderRadius: '16px 16px 0 0', background: THEME_GRADIENT, display: 'flex', alignItems: 'center', padding: '0 24px', gap: '14px', flexShrink: 0 }}>
               {!modalLoading && selected && (
                 <>
                   <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -737,7 +700,7 @@ const Courses = () => {
 
             {!modalLoading && selected && (
               <div style={{ padding: '24px 28px 28px', overflowY: 'auto', maxHeight: 'calc(90vh - 90px)' }}>
-                <p style={{ fontSize: '14px', color: '#555', lineHeight: '1.75', backgroundColor: '#f7f9fb', padding: '14px 16px', borderRadius: '10px', marginBottom: '22px', borderLeft: `3px solid ${modalAccent}` }}>
+                <p style={{ fontSize: '14px', color: '#555', lineHeight: '1.75', backgroundColor: '#f7f9fb', padding: '14px 16px', borderRadius: '10px', marginBottom: '22px', borderLeft: `3px solid ${THEME_ACCENT}` }}>
                   {selected.description}
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '22px' }}>
@@ -764,10 +727,10 @@ const Courses = () => {
                     <span style={{ fontSize: '12px', fontWeight: '700', color: seatColor(seatPct(selected)) }}>{Math.round(seatPct(selected))}% filled</span>
                   </div>
                   <div style={{ height: '8px', backgroundColor: '#f0f0f0', borderRadius: '999px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', borderRadius: '999px', width: `${seatPct(selected)}%`, background: modalGrad, transition: 'width 0.5s ease' }} />
+                    <div style={{ height: '100%', borderRadius: '999px', width: `${seatPct(selected)}%`, background: THEME_GRADIENT, transition: 'width 0.5s ease' }} />
                   </div>
                 </div>
-                <button className="enroll-modal-btn" style={{ width: '100%', padding: '15px', background: modalGrad, color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.22s', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 4px 18px rgba(0,0,0,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                <button className="enroll-modal-btn" style={{ width: '100%', padding: '15px', background: THEME_GRADIENT, color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.22s', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 4px 18px rgba(0,0,0,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   onClick={handleEnroll}>
                   Enroll Now
                 </button>
@@ -779,7 +742,6 @@ const Courses = () => {
     </>
   );
 };
-
 
 const styles = {
   hero: { position: 'relative', background: 'linear-gradient(135deg, #f0fafa 0%, #e0f7f6 50%, #ccf0ee 100%)', padding: '70px 60px', overflow: 'hidden', minHeight: '380px' },
@@ -816,13 +778,9 @@ const styles = {
   availDot: { width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0 },
   bannerIcon: { position: 'absolute', bottom: '-18px', left: '50%', transform: 'translateX(-50%)', width: '52px', height: '52px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 20px rgba(0,0,0,0.15)', zIndex: 2 },
   cardBody: { padding: '36px 20px 20px', display: 'flex', flexDirection: 'column', flex: 1 },
-  courseTitle: { fontSize: '16px', fontWeight: '800', color: '#1a2b3c', margin: '0 0 8px', lineHeight: '1.35', fontFamily: "'Plus Jakarta Sans', sans-serif" },
-  description: { fontSize: '13px', color: '#8a96a3', lineHeight: '1.65', margin: '0 0 12px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
+  courseTitle: { fontSize: '16px', fontWeight: '800', color: '#1a2b3c', margin: '0 0 16px', lineHeight: '1.35', fontFamily: "'Plus Jakarta Sans', sans-serif" },
   metaChips: { display: 'flex', flexWrap: 'wrap', gap: '7px', marginBottom: '16px' },
   metaChip: { display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: '700' },
-  progressSection: { marginBottom: '16px' },
-  progressLabel: { display: 'flex', justifyContent: 'space-between', marginBottom: '6px' },
-  progressTrack: { height: '7px', backgroundColor: '#f0f2f5', borderRadius: '999px', overflow: 'hidden' },
   viewBtn: { width: '100%', padding: '11px', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s', marginTop: 'auto', letterSpacing: '0.02em', fontFamily: "'DM Sans', sans-serif" },
 
   instructorCard: { backgroundColor: '#fafafa', borderRadius: '16px', padding: '28px 22px', width: '220px', textAlign: 'center', boxShadow: '0 3px 12px rgba(0,0,0,0.06)', transition: 'transform 0.2s, box-shadow 0.2s' },
