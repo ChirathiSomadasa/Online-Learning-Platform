@@ -7,7 +7,7 @@ const auth = require('../middleware/authMiddleware')
 // router.get('/logs', getLogs)
 // router.get('/logs/:email', getUserLogs)
 
-router.post('/send', sendNotification);
+router.post('/send', auth, sendNotification);
 router.get('/logs', auth, getLogs);
 router.get('/logs/:email', auth, getUserLogs);
 

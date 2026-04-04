@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAllCourses } from '../services/courseService';
+import axios from 'axios';
+
 
 // MUI Icons
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
@@ -14,9 +16,15 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 const StudentHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [enrollments, setEnrollments] = useState([]);
+  const [userStats, setUserStats] = useState({
+    enrolled: 0,
+    completed: 0,
+    hours: 0
+  });
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -39,10 +47,42 @@ const StudentHome = () => {
     { icon: <CheckCircleOutlineIcon style={styles.statIcon} />, num: '1', lbl: 'Completed', color: '#2ecc71' },
     { icon: <AccessTimeIcon style={styles.statIcon} />, num: '24h', lbl: 'Learning Time', color: '#f1c40f' },
   ];
+  
+  useEffect(() => {
+    if (user && user.id) {
+      fetchUserData();
+    }
+  }, [user]);
+
+  const fetchUserData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:3003/api/enrollment/user/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const data = res.data;
+      setEnrollments(data);
+      calculateStats(data);
+    } catch (error) {
+      console.error('Error fetching enrollments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateStats = (data) => {
+    const enrolled = data.length;
+    const completed = data.filter(e => e.progress === 100).length;
+    const hours = enrolled * 15;
+    setUserStats({ enrolled, completed, hours });
+  };
+
 
   return (
     <div style={styles.page}>
-      
+
       {/* HERO BANNER WITH IMAGE */}
       <section style={styles.heroBanner}>
         <div style={styles.overlay}>
@@ -107,7 +147,7 @@ const StudentHome = () => {
                   <div style={styles.cardHeader}>
                     <span style={styles.courseCategory}>{course.category || 'General'}</span>
                   </div>
-                  
+
                   <h3 style={styles.courseTitle}>{course.title}</h3>
 
                   <div style={styles.detailsBox}>
@@ -125,7 +165,7 @@ const StudentHome = () => {
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     style={styles.enrollBtn}
                     onMouseOver={(e) => e.target.style.backgroundColor = '#008b8b'}
                     onMouseOut={(e) => e.target.style.backgroundColor = '#00b4b4'}
@@ -213,10 +253,10 @@ const styles = {
     transition: 'transform 0.2s',
   },
   statsContainer: {
-    marginTop: '0',           
+    marginTop: '0',
     position: 'relative',
     zIndex: 2,
-    padding: '30px 80px',    
+    padding: '30px 80px',
     backgroundColor: '#f8f9fd',
   },
   statsRow: {
@@ -247,26 +287,26 @@ const styles = {
   statNum: { fontSize: '24px', fontWeight: 'bold', color: '#1a1a1a', margin: 0 },
   statLbl: { color: '#666', fontSize: '14px', margin: 0 },
   section: { padding: '60px 80px' },
-  sectionHeader: { 
-    display: 'flex', 
-    justifyContent: 'space-between', 
+  sectionHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: '40px' 
+    marginBottom: '40px'
   },
   sectionTitle: { fontSize: '28px', color: '#1a1a1a', margin: 0, fontWeight: '700' },
   sectionSubtitle: { color: '#666', fontSize: '16px', marginTop: '8px' },
-  textBtn: { 
-    background: 'none', 
-    border: 'none', 
-    color: '#00b4b4', 
-    fontWeight: 'bold', 
+  textBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#00b4b4',
+    fontWeight: 'bold',
     cursor: 'pointer',
     fontSize: '15px'
   },
-  courseGrid: { 
-    display: 'grid', 
-    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
-    gap: '30px' 
+  courseGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: '30px'
   },
   courseCard: {
     backgroundColor: '#fff',

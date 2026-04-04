@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -8,40 +7,27 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SchoolIcon from '@mui/icons-material/School';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
-import { getUserNotifications } from '../services/notificationService';
 
 const Header = () => {
-  const { user, token, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [loadingNotifs, setLoadingNotifs] = useState(false);
 
-  useEffect(() => {
-    if (!user?.email || !token) return;
+  // Sample notifications — replace with real data later
+  const notifications = user?.role === 'student'
+    ? [
+        { id: 1, text: 'Your enrollment was confirmed!',   time: '2 min ago',  unread: true  },
+        { id: 2, text: 'New course available: React 101',  time: '1 hour ago', unread: true  },
+        { id: 3, text: 'Assignment deadline tomorrow',     time: '3 hours ago',unread: false },
+      ]
+    : [
+        { id: 1, text: '3 new students enrolled in your course', time: '5 min ago',  unread: true  },
+        { id: 2, text: 'Your course was approved',               time: '2 hours ago', unread: true  },
+        { id: 3, text: 'Student submitted an assignment',        time: '1 day ago',   unread: false },
+      ];
 
-    const load = async () => {
-      setLoadingNotifs(true);
-      try {
-        const data = await getUserNotifications(user.email, token);
-        setNotifications(data || []);
-      } catch (e) { 
-        // keep silent; optional console.warn
-      } finally { setLoadingNotifs(false); }
-    };
-
-    load();
-  }, [user?.email, token]);
-
-  const ordered = [...notifications].sort(
-    (a, b) => new Date(b.sentAt) - new Date(a.sentAt)
-  );
-  const dropdownNotifications = useMemo(
-    () => ordered.slice(0, 5),
-    [ordered]
-  );
-  const unreadCount = 0; // no "read" field in model yet
+  const unreadCount = notifications.filter(n => n.unread).length;
 
   const handleLogout = () => {
     logout();
@@ -179,34 +165,33 @@ const Header = () => {
 
                     {/* List */}
                     <div style={styles.notifList}>
-                      {loadingNotifs ? (
-                        <div style={styles.notifItem}>Loading...</div>
-                      ) : dropdownNotifications.length === 0 ? (
-                        <div style={styles.notifItem}>No notifications</div>
-                      ) : (
-                        dropdownNotifications.map(n => (
-                          <div key={n._id} style={styles.notifItem} className="notif-item">
-                            <div style={styles.notifTextWrap}>
-                              <p style={styles.notifText}>
-                                {n.message || n.type || 'Notification'}
-                              </p>
-                              <p style={styles.notifTime}>
-                                {new Date(n.sentAt).toLocaleString()}
-                              </p>
-                            </div>
+                      {notifications.map(n => (
+                        <div
+                          key={n.id}
+                          style={{
+                            ...styles.notifItem,
+                            backgroundColor: n.unread ? '#f0fcfc' : '#fff',
+                          }}
+                          className="notif-item"
+                        >
+                          {/* Unread dot */}
+                          <div style={styles.notifDotWrap}>
+                            <div style={{
+                              ...styles.notifDot,
+                              backgroundColor: n.unread ? '#49BBBD' : 'transparent',
+                            }} />
                           </div>
-                        ))
-                      )}
+                          <div style={styles.notifTextWrap}>
+                            <p style={styles.notifText}>{n.text}</p>
+                            <p style={styles.notifTime}>{n.time}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
 
                     {/* Footer */}
                     <div style={styles.notifFooter}>
-                      <button style={styles.notifViewAll} onClick={() => {
-                        setNotifOpen(false);
-                        navigate('/notifications');
-                      }}>
-                        View all notifications
-                      </button>
+                      <button style={styles.notifViewAll}>View all notifications</button>
                     </div>
 
                   </div>

@@ -9,8 +9,6 @@ info:
 servers:
   - url: http://localhost:3004
     description: Local development server
-  - url: http://localhost:3000
-    description: Via API Gateway
 
 components:
   securitySchemes:

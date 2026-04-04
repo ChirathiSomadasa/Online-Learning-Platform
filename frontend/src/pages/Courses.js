@@ -22,6 +22,9 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ChevronLeftIcon   from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon  from '@mui/icons-material/ChevronRight';
 import bannerGirl from '../images/course/course_girl.png';
+import axios from 'axios';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const CARDS_PER_PAGE = 6; 
 
@@ -319,13 +322,45 @@ const Courses = () => {
   };
 
   const closeModal = () => { setModalOpen(false); setSelected(null); };
-  const handleEnroll = () => { navigate(`/enroll/${selected._id}`); };
-
+ // const handleEnroll = () => { navigate(`/enroll/${selected._id}`); };
   const seatPct        = (c)   => c.totalSeats > 0 ? Math.min(100, (c.enrolledCount / c.totalSeats) * 100) : 0;
   const availLabel     = (pct) => pct >= 90 ? 'Almost Full' : pct >= 70 ? 'Filling Up' : 'Open';
   const availBg        = (pct) => pct >= 90 ? '#fdecea' : pct >= 70 ? '#fff8e1' : '#e8faf9';
   const availFg        = (pct) => pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00a89d';
   const seatColor      = (pct) => pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00a89d';
+
+const handleEnroll = async () => {
+  try {
+    const token = localStorage.getItem('token');
+
+    const response = await axios.post(
+      'http://localhost:3003/api/enrollment',
+      { courseId: selected._id },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (response.data) {
+      toast.success('Successfully enrolled in course!');
+      closeModal();
+      // Navigate to enrollments page with success message
+      navigate('/enrollments', {
+        state: {
+          enrollmentSuccess: true,
+          message: `Successfully enrolled in ${selected.title}`
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Enrollment error:', error);
+    toast.error(error.response?.data?.message || 'Failed to enroll in course');
+  }
+};
+
 
 
   const instructorMap  = courses.reduce((acc, c) => {
