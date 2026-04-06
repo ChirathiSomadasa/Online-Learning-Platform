@@ -25,14 +25,15 @@ import bannerGirl from '../images/course/course_girl.png';
 import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import PaymentModal from '../components/PaymentModal';
 
-const CARDS_PER_PAGE = 6; 
+const CARDS_PER_PAGE = 6;
 
 const SORT_OPTIONS = [
-  { value: 'popular',  label: 'Most Popular',  icon: 'trending' },
-  { value: 'newest',   label: 'Newest First',  icon: 'new' },
+  { value: 'popular',  label: 'Most Popular',   icon: 'trending' },
+  { value: 'newest',   label: 'Newest First',   icon: 'new' },
   { value: 'seats',    label: 'Most Available', icon: 'seats' },
-  { value: 'az',       label: 'Alphabetical Order',          icon: 'az' },
+  { value: 'az',       label: 'Alphabetical Order', icon: 'az' },
 ];
 
 const FAQS = [
@@ -41,10 +42,9 @@ const FAQS = [
   { q: 'How do I contact my instructor?', a: 'Once enrolled, you can reach your instructor through the course discussion board or the in-platform messaging system available in your student dashboard.' },
 ];
 
-
 const THEME_GRADIENT = 'linear-gradient(135deg, #00a89d 0%, #006060 100%)';
-const THEME_ACCENT = '#00a89d';
-const THEME_ICON_BG = '#e8faf9'; 
+const THEME_ACCENT   = '#00a89d';
+const THEME_ICON_BG  = '#e8faf9';
 
 const sortCourses = (list, key) => {
   const copy = [...list];
@@ -56,28 +56,24 @@ const sortCourses = (list, key) => {
       const bLeft = (b.totalSeats || 0) - (b.enrolledCount || 0);
       return bLeft - aLeft;
     });
-    case 'az':      return copy.sort((a, b) => a.title.localeCompare(b.title));
-    default:        return copy;
+    case 'az': return copy.sort((a, b) => a.title.localeCompare(b.title));
+    default:   return copy;
   }
 };
 
-// Helper function to generate a consistent pseudo-random 1-5 rating based on the instructor's name
 const getInstructorStars = (name) => {
   if (!name) return 5;
   let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash += name.charCodeAt(i);
-  }
-  return (hash % 5) + 1; // Ensures a number between 1 and 5
+  for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+  return (hash % 5) + 1;
 };
 
-// A searchable popover that handles 100s of categories gracefully
+//Category Picker 
 const CategoryPicker = ({ categories, value, onChange }) => {
-  const [open, setOpen]         = useState(false);
-  const [query, setQuery]       = useState('');
-  const ref                     = useRef(null);
+  const [open, setOpen]   = useState(false);
+  const [query, setQuery] = useState('');
+  const ref               = useRef(null);
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', handler);
@@ -121,7 +117,6 @@ const CategoryPicker = ({ categories, value, onChange }) => {
           boxShadow: '0 12px 40px rgba(0,0,0,0.15)', border: '1px solid #f0f0f0',
           overflow: 'hidden',
         }}>
-          {/* Search within categories */}
           <div style={{ padding: '10px 12px', borderBottom: '1px solid #f0f0f0', position: 'relative' }}>
             <SearchIcon style={{ position: 'absolute', left: '22px', top: '50%', transform: 'translateY(-50%)', color: '#bbb', fontSize: '16px' }} />
             <input
@@ -176,7 +171,6 @@ const CategoryPicker = ({ categories, value, onChange }) => {
               </button>
             ))}
           </div>
-
           <div style={{ padding: '8px 16px', borderTop: '1px solid #f0f0f0', fontSize: '11px', color: '#bbb' }}>
             {filtered.length} of {categories.length} categories
           </div>
@@ -186,10 +180,10 @@ const CategoryPicker = ({ categories, value, onChange }) => {
   );
 };
 
+//  Pagination
 const Pagination = ({ page, totalPages, onChange }) => {
   if (totalPages <= 1) return null;
 
-  // Build page number list — always show first, last, current ±1, with ellipsis
   const pages = [];
   for (let i = 1; i <= totalPages; i++) {
     if (i === 1 || i === totalPages || (i >= page - 1 && i <= page + 1)) {
@@ -201,11 +195,7 @@ const Pagination = ({ page, totalPages, onChange }) => {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '48px' }}>
-      <button
-        onClick={() => onChange(page - 1)}
-        disabled={page === 1}
-        style={pgBtn(page === 1)}
-      >
+      <button onClick={() => onChange(page - 1)} disabled={page === 1} style={pgBtn(page === 1)}>
         <ChevronLeftIcon style={{ fontSize: '20px' }} />
       </button>
 
@@ -219,10 +209,10 @@ const Pagination = ({ page, totalPages, onChange }) => {
             style={{
               ...pgBtn(false),
               backgroundColor: p === page ? '#00b4b4' : '#fff',
-              color: p === page ? '#fff' : '#555',
-              borderColor: p === page ? '#00b4b4' : '#e0e0e0',
-              fontWeight: p === page ? '700' : '500',
-              boxShadow: p === page ? '0 4px 12px rgba(0,180,180,0.3)' : 'none',
+              color:           p === page ? '#fff'    : '#555',
+              borderColor:     p === page ? '#00b4b4' : '#e0e0e0',
+              fontWeight:      p === page ? '700'     : '500',
+              boxShadow:       p === page ? '0 4px 12px rgba(0,180,180,0.3)' : 'none',
             }}
           >
             {p}
@@ -230,11 +220,7 @@ const Pagination = ({ page, totalPages, onChange }) => {
         )
       )}
 
-      <button
-        onClick={() => onChange(page + 1)}
-        disabled={page === totalPages}
-        style={pgBtn(page === totalPages)}
-      >
+      <button onClick={() => onChange(page + 1)} disabled={page === totalPages} style={pgBtn(page === totalPages)}>
         <ChevronRightIcon style={{ fontSize: '20px' }} />
       </button>
 
@@ -255,7 +241,7 @@ const pgBtn = (disabled) => ({
   fontFamily: "'DM Sans', sans-serif",
 });
 
-
+// Main Component 
 const Courses = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -273,6 +259,9 @@ const Courses = () => {
   const [modalOpen, setModalOpen]       = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [openFaq, setOpenFaq]           = useState(null);
+
+  // Payment modal state
+  const [paymentCourse, setPaymentCourse] = useState(null);
 
   const exploreRef = useRef(null);
 
@@ -301,9 +290,9 @@ const Courses = () => {
     return sortCourses(result, sortBy);
   }, [courses, search, category, sortBy]);
 
-  const totalPages  = Math.max(1, Math.ceil(filtered.length / CARDS_PER_PAGE));
-  const safePage    = Math.min(page, totalPages);
-  const paginated   = filtered.slice((safePage - 1) * CARDS_PER_PAGE, safePage * CARDS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / CARDS_PER_PAGE));
+  const safePage   = Math.min(page, totalPages);
+  const paginated  = filtered.slice((safePage - 1) * CARDS_PER_PAGE, safePage * CARDS_PER_PAGE);
 
   useEffect(() => { setPage(1); }, [search, category, sortBy]);
 
@@ -322,46 +311,67 @@ const Courses = () => {
   };
 
   const closeModal = () => { setModalOpen(false); setSelected(null); };
- // const handleEnroll = () => { navigate(`/enroll/${selected._id}`); };
-  const seatPct        = (c)   => c.totalSeats > 0 ? Math.min(100, (c.enrolledCount / c.totalSeats) * 100) : 0;
-  const availLabel     = (pct) => pct >= 90 ? 'Almost Full' : pct >= 70 ? 'Filling Up' : 'Open';
-  const availBg        = (pct) => pct >= 90 ? '#fdecea' : pct >= 70 ? '#fff8e1' : '#e8faf9';
-  const availFg        = (pct) => pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00a89d';
-  const seatColor      = (pct) => pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00a89d';
 
-const handleEnroll = async () => {
-  try {
-    const token = localStorage.getItem('token');
+  const seatPct    = (c)   => c.totalSeats > 0 ? Math.min(100, (c.enrolledCount / c.totalSeats) * 100) : 0;
+  const availLabel = (pct) => pct >= 90 ? 'Almost Full' : pct >= 70 ? 'Filling Up' : 'Open';
+  const availBg    = (pct) => pct >= 90 ? '#fdecea' : pct >= 70 ? '#fff8e1' : '#e8faf9';
+  const availFg    = (pct) => pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00a89d';
+  const seatColor  = (pct) => pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00a89d';
 
-    const response = await axios.post(
-      'http://localhost:3003/api/enrollment',
-      { courseId: selected._id },
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+  // Enroll handler — paid vs free
+  const handleEnroll = () => {
+    if (!selected) return;
 
-    if (response.data) {
-      toast.success('Successfully enrolled in course!');
+    if (selected.price && selected.price > 0) {
+      // Paid course — open payment modal
+      setPaymentCourse(selected);
       closeModal();
-      // Navigate to enrollments page with success message
-      navigate('/enrollments', {
-        state: {
-          enrollmentSuccess: true,
-          message: `Successfully enrolled in ${selected.title}`
-        }
-      });
+    } else {
+      // Free course — enroll directly
+      handleFreeEnroll();
     }
-  } catch (error) {
-    console.error('Enrollment error:', error);
-    toast.error(error.response?.data?.message || 'Failed to enroll in course');
-  }
-};
+  };
 
+  const handleFreeEnroll = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        'http://localhost:3003/api/enrollment',
+        { courseId: selected._id },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      if (response.data) {
+        toast.success('Successfully enrolled in course!');
+        closeModal();
+        navigate('/enrollments', {
+          state: {
+            enrollmentSuccess: true,
+            message: `Successfully enrolled in ${selected.title}`,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Enrollment error:', err);
+      toast.error(err.response?.data?.message || 'Failed to enroll in course');
+    }
+  };
 
+  // Called after successful Stripe payment
+  const handlePaymentSuccess = (enrollmentId) => {
+    setPaymentCourse(null);
+    toast.success('Payment successful! You are now enrolled.');
+    navigate('/enrollments', {
+      state: {
+        enrollmentSuccess: true,
+        message: 'Payment confirmed. You are now enrolled!',
+      },
+    });
+  };
 
   const instructorMap  = courses.reduce((acc, c) => {
     if (!c.instructor) return acc;
@@ -420,6 +430,7 @@ const handleEnroll = async () => {
 
       <div style={{ fontFamily: "'DM Sans', sans-serif", backgroundColor: '#f3f6f9', minHeight: '100vh' }}>
 
+        {/* HERO */}
         <section style={styles.hero}>
           <div style={styles.blob1} /><div style={styles.blob2} />
           <div style={styles.heroInner}>
@@ -433,7 +444,7 @@ const handleEnroll = async () => {
               {!loading && courses.length > 0 && (
                 <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '24px' }}>
                   {[
-                    { label: `${courses.length} Courses`, color: '#00a89d' },
+                    { label: `${courses.length} Courses`,     color: '#00a89d' },
                     { label: `${categories.length} Categories`, color: '#006060' },
                   ].map((s, i) => (
                     <span key={i} style={{ backgroundColor: '#fff', color: s.color, padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
@@ -472,6 +483,8 @@ const handleEnroll = async () => {
             </div>
           </div>
         </section>
+
+        {/*TOP COURSE BANNER */}
         {!loading && topCourse && (
           <div style={{ padding: '0 60px', marginTop: '-10px', marginBottom: '0' }}>
             <div style={{
@@ -508,14 +521,15 @@ const handleEnroll = async () => {
           </div>
         )}
 
+        {/* COURSE GRID  */}
         <div ref={exploreRef} id="explore-section" style={{ padding: '52px 60px' }}>
           <div style={styles.sectionHead}>
             <span style={styles.sectionEyebrow}>Our Courses</span>
             <h2 style={styles.sectionTitle}>Explore Our Courses</h2>
           </div>
 
+          {/* Search + filter bar */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
-
             <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
               <SearchIcon style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#bbb', fontSize: '20px', pointerEvents: 'none' }} />
               <input
@@ -531,14 +545,13 @@ const handleEnroll = async () => {
                 </button>
               )}
             </div>
-
             <CategoryPicker categories={categories} value={category} onChange={setCategory} />
-
             <span style={{ color: '#aaa', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>
               {filtered.length} course{filtered.length !== 1 ? 's' : ''}
             </span>
           </div>
 
+          {/* Sort bar */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '32px', flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', color: '#bbb', fontWeight: '600', marginRight: '4px' }}>SORT BY</span>
             {SORT_OPTIONS.map(opt => (
@@ -584,6 +597,7 @@ const handleEnroll = async () => {
               </button>
             </div>
           )}
+
           {!loading && !error && paginated.length > 0 && (
             <>
               <p style={{ fontSize: '12px', color: '#bbb', fontWeight: '600', marginBottom: '18px' }}>
@@ -598,7 +612,6 @@ const handleEnroll = async () => {
 
                   return (
                     <div key={course._id} className="ccard" style={{ ...styles.card, position: 'relative' }}>
-              
                       {isTop && (
                         <div style={{ position: 'absolute', top: '12px', left: '-4px', zIndex: 5, backgroundColor: '#ffd700', color: '#4a3800', fontSize: '10px', fontWeight: '800', padding: '3px 10px 3px 8px', borderRadius: '0 6px 6px 0', boxShadow: '2px 2px 8px rgba(0,0,0,0.15)', letterSpacing: '0.05em' }}>
                           TOP PICK
@@ -621,14 +634,12 @@ const handleEnroll = async () => {
                       </div>
 
                       <div style={styles.cardBody}>
-                        {/* Simplified preview - removed description */}
                         <h3 style={styles.courseTitle}>{course.title}</h3>
-                        
+
                         <div className="ccard-reveal" style={{ fontSize: '12px', color: '#999', lineHeight: '1.6', marginBottom: '10px' }}>
                           Click "View Details" to see the full course description and enrollment options.
                         </div>
 
-                        {/* Kept only essential browsing chips */}
                         <div style={styles.metaChips}>
                           <span style={{ ...styles.metaChip, backgroundColor: THEME_ICON_BG, color: THEME_ACCENT }}>
                             <PersonIcon style={{ fontSize: '13px' }} />{course.instructor}
@@ -638,12 +649,21 @@ const handleEnroll = async () => {
                               <AccessTimeIcon style={{ fontSize: '13px' }} />{course.duration}
                             </span>
                           )}
-                           <span style={{ ...styles.metaChip, backgroundColor: '#fff8e1', color: '#e0a020' }}>
+                          <span style={{ ...styles.metaChip, backgroundColor: '#fff8e1', color: '#e0a020' }}>
                             <EventSeatIcon style={{ fontSize: '13px' }} />{available} left
                           </span>
+                          {/* Price chip */}
+                          {course.price && course.price > 0 ? (
+                            <span style={{ ...styles.metaChip, backgroundColor: '#e8f5e9', color: '#2e7d32' }}>
+                              ${parseFloat(course.price).toFixed(2)}
+                            </span>
+                          ) : (
+                            <span style={{ ...styles.metaChip, backgroundColor: '#e8f5e9', color: '#2e7d32' }}>
+                              Free
+                            </span>
+                          )}
                         </div>
 
-                        {/* View button pushed to bottom */}
                         <button className="view-btn" style={{ ...styles.viewBtn, background: THEME_GRADIENT, marginTop: 'auto' }}
                           onClick={() => openDetail(course._id)}>
                           View Details
@@ -659,6 +679,7 @@ const handleEnroll = async () => {
           )}
         </div>
 
+        {/*INSTRUCTORS*/}
         {!loading && instructorList.length > 0 && (
           <section style={{ backgroundColor: '#fff', padding: '64px 60px' }}>
             <div style={styles.sectionHead}>
@@ -689,13 +710,7 @@ const handleEnroll = async () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '2px' }}>
                       {[...Array(5)].map((_, k) => (
-                        <StarIcon 
-                          key={k} 
-                          style={{ 
-                            color: k < numStars ? '#ffd700' : '#e0e0e0', 
-                            fontSize: '16px' 
-                          }} 
-                        />
+                        <StarIcon key={k} style={{ color: k < numStars ? '#ffd700' : '#e0e0e0', fontSize: '16px' }} />
                       ))}
                     </div>
                   </div>
@@ -705,6 +720,7 @@ const handleEnroll = async () => {
           </section>
         )}
 
+        {/* FAQ */}
         <section id="faq-section" style={{ backgroundColor: '#f3f6f9', padding: '72px 60px' }}>
           <div style={{ display: 'flex', gap: '60px', maxWidth: '1100px', margin: '0 auto', alignItems: 'flex-start' }}>
             <div style={{ width: '280px', flexShrink: 0 }}>
@@ -721,7 +737,9 @@ const handleEnroll = async () => {
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
                     <span style={{ fontSize: '15px', fontWeight: '600', color: '#2c3e50', flex: 1 }}>{faq.q}</span>
-                    {openFaq === i ? <RemoveIcon style={{ fontSize: '18px', color: '#00a89d', flexShrink: 0 }} /> : <AddIcon style={{ fontSize: '18px', color: '#888', flexShrink: 0 }} />}
+                    {openFaq === i
+                      ? <RemoveIcon style={{ fontSize: '18px', color: '#00a89d', flexShrink: 0 }} />
+                      : <AddIcon    style={{ fontSize: '18px', color: '#888',    flexShrink: 0 }} />}
                   </div>
                   {openFaq === i && <p style={{ fontSize: '14px', color: '#666', lineHeight: '1.7', margin: '12px 0 0', paddingRight: '30px' }}>{faq.a}</p>}
                 </div>
@@ -731,9 +749,11 @@ const handleEnroll = async () => {
         </section>
       </div>
 
+      {/* COURSE DETAIL MODAL */}
       {modalOpen && (
         <div style={styles.overlay} onClick={e => { if (e.target === e.currentTarget) closeModal(); }}>
           <div style={styles.modal} className="modal-anim">
+
             <div style={{ height: '90px', borderRadius: '16px 16px 0 0', background: THEME_GRADIENT, display: 'flex', alignItems: 'center', padding: '0 24px', gap: '14px', flexShrink: 0 }}>
               {!modalLoading && selected && (
                 <>
@@ -759,6 +779,7 @@ const handleEnroll = async () => {
                 <p style={{ fontSize: '14px', color: '#555', lineHeight: '1.75', backgroundColor: '#f7f9fb', padding: '14px 16px', borderRadius: '10px', marginBottom: '22px', borderLeft: `3px solid ${THEME_ACCENT}` }}>
                   {selected.description}
                 </p>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '22px' }}>
                   {[
                     { icon: <PersonIcon style={styles.detailIcon} />,        label: 'Instructor', value: selected.instructor },
@@ -777,6 +798,8 @@ const handleEnroll = async () => {
                     </div>
                   ))}
                 </div>
+
+                {/* Capacity bar */}
                 <div style={{ marginBottom: '26px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ fontSize: '12px', color: '#999', fontWeight: '600' }}>Capacity</span>
@@ -786,19 +809,55 @@ const handleEnroll = async () => {
                     <div style={{ height: '100%', borderRadius: '999px', width: `${seatPct(selected)}%`, background: THEME_GRADIENT, transition: 'width 0.5s ease' }} />
                   </div>
                 </div>
-                <button className="enroll-modal-btn" style={{ width: '100%', padding: '15px', background: THEME_GRADIENT, color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.22s', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 4px 18px rgba(0,0,0,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                  onClick={handleEnroll}>
-                  Enroll Now
+
+                {/* Price display */}
+                {selected.price && selected.price > 0 && (
+                  <div style={{ backgroundColor: '#e8f5e9', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', color: '#2e7d32', fontWeight: '600' }}>Course Price</span>
+                    <span style={{ fontSize: '22px', fontWeight: '800', color: '#2e7d32' }}>${parseFloat(selected.price).toFixed(2)} <span style={{ fontSize: '13px', fontWeight: '500' }}>USD</span></span>
+                  </div>
+                )}
+
+                {/* Enroll button — shows price if paid, Free if not */}
+                <button
+                  className="enroll-modal-btn"
+                  style={{
+                    width: '100%', padding: '15px',
+                    background: THEME_GRADIENT,
+                    color: '#fff', border: 'none', borderRadius: '12px',
+                    fontSize: '16px', fontWeight: '700', cursor: 'pointer',
+                    transition: 'all 0.22s', fontFamily: "'DM Sans', sans-serif",
+                    boxShadow: '0 4px 18px rgba(0,0,0,0.14)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  }}
+                  onClick={handleEnroll}
+                >
+                  {selected.price && selected.price > 0
+                    ? `Pay $${parseFloat(selected.price).toFixed(2)} & Enroll`
+                    : 'Enroll Free'
+                  }
                 </button>
               </div>
             )}
           </div>
         </div>
       )}
+
+      {/*PAYMENT MODAL */}
+      {paymentCourse && (
+        <PaymentModal
+          course={paymentCourse}
+          onSuccess={handlePaymentSuccess}
+          onClose={() => setPaymentCourse(null)}
+        />
+      )}
+
+      <ToastContainer position="bottom-right" autoClose={3000} />
     </>
   );
 };
 
+// Styles
 const styles = {
   hero: { position: 'relative', background: 'linear-gradient(135deg, #f0fafa 0%, #e0f7f6 50%, #ccf0ee 100%)', padding: '70px 60px', overflow: 'hidden', minHeight: '380px' },
   blob1: { position: 'absolute', top: '-60px', right: '25%', width: '220px', height: '220px', borderRadius: '50%', background: 'rgba(0,168,157,0.25)', pointerEvents: 'none' },
@@ -809,45 +868,46 @@ const styles = {
   heroTitle: { fontSize: '48px', fontWeight: '800', color: '#004040', margin: '0 0 18px', lineHeight: '1.2', fontFamily: "'Plus Jakarta Sans', sans-serif" },
   heroSub: { fontSize: '17px', color: '#1a5050', lineHeight: '1.8', margin: '0 0 20px' },
   heroBtns: { display: 'flex', gap: '14px', flexWrap: 'wrap' },
-  heroBtnPrimary: { backgroundColor: '#00a89d', color: '#fff', border: 'none', padding: '13px 32px', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', fontWeight: '700', transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(0,168,157,0.3)', fontFamily: "'DM Sans', sans-serif" },
+  heroBtnPrimary:   { backgroundColor: '#00a89d', color: '#fff', border: 'none', padding: '13px 32px', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', fontWeight: '700', transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(0,168,157,0.3)', fontFamily: "'DM Sans', sans-serif" },
   heroBtnSecondary: { backgroundColor: '#fff', color: '#00a89d', border: '1.5px solid #00a89d', padding: '13px 32px', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', fontWeight: '700', transition: 'all 0.2s', fontFamily: "'DM Sans', sans-serif" },
-  heroRight: { position: 'relative', width: '360px', height: '300px', flexShrink: 0 },
+  heroRight:  { position: 'relative', width: '360px', height: '300px', flexShrink: 0 },
   heroCircle: { position: 'absolute', top: '65%', left: '50%', transform: 'translate(-50%, -50%)', width: '480px', height: '480px', borderRadius: '50%', background: 'linear-gradient(135deg, #00a89d, #007a75)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 40px rgba(0,168,157,0.35)' },
-  floatBadge: { position: 'absolute', backgroundColor: '#fff', borderRadius: '30px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '7px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: '600', color: '#2c3e50', whiteSpace: 'nowrap' },
+  floatBadge:     { position: 'absolute', backgroundColor: '#fff', borderRadius: '30px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '7px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: '600', color: '#2c3e50', whiteSpace: 'nowrap' },
   floatBadgeText: { fontSize: '12px', color: '#2c3e50', fontWeight: '600' },
 
-  sectionHead: { textAlign: 'center', marginBottom: '36px' },
+  sectionHead:    { textAlign: 'center', marginBottom: '36px' },
   sectionEyebrow: { display: 'inline-block', color: '#00a89d', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' },
-  sectionTitle: { fontSize: '32px', fontWeight: '800', color: '#1a2b3c', margin: '6px 0 0', fontFamily: "'Plus Jakarta Sans', sans-serif" },
+  sectionTitle:   { fontSize: '32px', fontWeight: '800', color: '#1a2b3c', margin: '6px 0 0', fontFamily: "'Plus Jakarta Sans', sans-serif" },
 
   searchInput: { width: '100%', padding: '13px 42px 13px 46px', borderRadius: '30px', border: '1.5px solid #e0e0e0', fontSize: '14px', outline: 'none', backgroundColor: '#fff', transition: 'border-color 0.2s, box-shadow 0.2s', fontFamily: "'DM Sans', sans-serif" },
 
   errorBox: { backgroundColor: '#fdecea', color: '#e74c3c', padding: '14px 20px', borderRadius: '10px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px' },
   retryBtn: { background: 'none', border: '1.5px solid #e74c3c', color: '#e74c3c', padding: '5px 14px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px' },
-  spinner: { width: '36px', height: '36px', border: '3px solid #e0e0e0', borderTop: '3px solid #00b4b4', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto' },
+  spinner:  { width: '36px', height: '36px', border: '3px solid #e0e0e0', borderTop: '3px solid #00b4b4', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto' },
 
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '26px' },
   card: { backgroundColor: '#fff', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.07)', display: 'flex', flexDirection: 'column' },
-  cardBanner: { position: 'relative', height: '120px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 16px 0', overflow: 'hidden', flexShrink: 0 },
+  cardBanner:   { position: 'relative', height: '120px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 16px 0', overflow: 'hidden', flexShrink: 0 },
   categoryPill: { backgroundColor: 'rgba(255,255,255,0.92)', color: '#1a2b3c', padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.07em', zIndex: 1 },
-  availBadge: { display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 11px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', zIndex: 1 },
-  availDot: { width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0 },
-  bannerIcon: { position: 'absolute', bottom: '-18px', left: '50%', transform: 'translateX(-50%)', width: '52px', height: '52px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 20px rgba(0,0,0,0.15)', zIndex: 2 },
-  cardBody: { padding: '36px 20px 20px', display: 'flex', flexDirection: 'column', flex: 1 },
-  courseTitle: { fontSize: '16px', fontWeight: '800', color: '#1a2b3c', margin: '0 0 16px', lineHeight: '1.35', fontFamily: "'Plus Jakarta Sans', sans-serif" },
-  metaChips: { display: 'flex', flexWrap: 'wrap', gap: '7px', marginBottom: '16px' },
-  metaChip: { display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: '700' },
-  viewBtn: { width: '100%', padding: '11px', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s', marginTop: 'auto', letterSpacing: '0.02em', fontFamily: "'DM Sans', sans-serif" },
+  availBadge:   { display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 11px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', zIndex: 1 },
+  availDot:     { width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0 },
+  bannerIcon:   { position: 'absolute', bottom: '-18px', left: '50%', transform: 'translateX(-50%)', width: '52px', height: '52px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 20px rgba(0,0,0,0.15)', zIndex: 2 },
+  cardBody:     { padding: '36px 20px 20px', display: 'flex', flexDirection: 'column', flex: 1 },
+  courseTitle:  { fontSize: '16px', fontWeight: '800', color: '#1a2b3c', margin: '0 0 16px', lineHeight: '1.35', fontFamily: "'Plus Jakarta Sans', sans-serif" },
+  metaChips:    { display: 'flex', flexWrap: 'wrap', gap: '7px', marginBottom: '16px' },
+  metaChip:     { display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: '700' },
+  viewBtn:      { width: '100%', padding: '11px', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s', marginTop: 'auto', letterSpacing: '0.02em', fontFamily: "'DM Sans', sans-serif" },
 
-  instructorCard: { backgroundColor: '#fafafa', borderRadius: '16px', padding: '28px 22px', width: '220px', textAlign: 'center', boxShadow: '0 3px 12px rgba(0,0,0,0.06)', transition: 'transform 0.2s, box-shadow 0.2s' },
+  instructorCard:   { backgroundColor: '#fafafa', borderRadius: '16px', padding: '28px 22px', width: '220px', textAlign: 'center', boxShadow: '0 3px 12px rgba(0,0,0,0.06)', transition: 'transform 0.2s, box-shadow 0.2s' },
   instructorAvatar: { width: '72px', height: '72px', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 6px 18px rgba(0,0,0,0.12)' },
-  instructorName: { fontSize: '16px', fontWeight: '700', color: '#2c3e50', margin: '0 0 4px' },
+  instructorName:   { fontSize: '16px', fontWeight: '700', color: '#2c3e50', margin: '0 0 4px' },
 
-  overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.48)', backdropFilter: 'blur(4px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' },
-  modal: { backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '560px', maxHeight: '90vh', boxShadow: '0 24px 70px rgba(0,0,0,0.22)', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  overlay:  { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.48)', backdropFilter: 'blur(4px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' },
+  modal:    { backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '560px', maxHeight: '90vh', boxShadow: '0 24px 70px rgba(0,0,0,0.22)', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
   closeBtn: { background: '#f5f5f5', border: 'none', borderRadius: '50%', width: '34px', height: '34px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' },
-  detailItem: { display: 'flex', alignItems: 'flex-start', gap: '10px', backgroundColor: '#f7f9fb', padding: '12px', borderRadius: '10px' },
-  detailIcon: { color: '#00b4b4', fontSize: '20px', marginTop: '2px', flexShrink: 0 },
+
+  detailItem:  { display: 'flex', alignItems: 'flex-start', gap: '10px', backgroundColor: '#f7f9fb', padding: '12px', borderRadius: '10px' },
+  detailIcon:  { color: '#00b4b4', fontSize: '20px', marginTop: '2px', flexShrink: 0 },
   detailLabel: { fontSize: '10px', color: '#b0b8c4', margin: '0 0 3px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.06em' },
   detailValue: { fontSize: '14px', color: '#1a2b3c', margin: 0, fontWeight: '600' },
 };

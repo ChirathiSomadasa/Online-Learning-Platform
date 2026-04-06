@@ -6,70 +6,70 @@ import {
 } from '../services/courseService';
 
 // MUI Icons
-import AddCircleOutlineIcon  from '@mui/icons-material/AddCircleOutline';
-import EditIcon              from '@mui/icons-material/Edit';
-import DeleteOutlineIcon     from '@mui/icons-material/DeleteOutline';
-import CloseIcon             from '@mui/icons-material/Close';
-import CheckCircleIcon       from '@mui/icons-material/CheckCircle';
-import MenuBookIcon          from '@mui/icons-material/MenuBook';
-import WarningAmberIcon      from '@mui/icons-material/WarningAmber';
-import ErrorOutlineIcon      from '@mui/icons-material/ErrorOutline';
-import InfoOutlinedIcon      from '@mui/icons-material/InfoOutlined';
-import ReportProblemIcon     from '@mui/icons-material/ReportProblem';
-import ViewModuleIcon        from '@mui/icons-material/ViewModule';
-import OndemandVideoIcon     from '@mui/icons-material/OndemandVideo';
-import GroupsIcon            from '@mui/icons-material/Groups';
-import PublishIcon           from '@mui/icons-material/Publish';
-import AccessTimeIcon        from '@mui/icons-material/AccessTime';
-import PeopleOutlineIcon     from '@mui/icons-material/PeopleOutline';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CloseIcon from '@mui/icons-material/Close';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import OndemandVideoIcon from '@mui/icons-material/OndemandVideo';
+import GroupsIcon from '@mui/icons-material/Groups';
+import PublishIcon from '@mui/icons-material/Publish';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
 
 // Table Header Icons
-import LocalLibraryIcon      from '@mui/icons-material/LocalLibrary';
-import StyleIcon             from '@mui/icons-material/Style';
-import TuneIcon              from '@mui/icons-material/Tune';
-import PieChartIcon          from '@mui/icons-material/PieChart';
-import VerifiedIcon          from '@mui/icons-material/Verified';
-import SettingsSuggestIcon   from '@mui/icons-material/SettingsSuggest';
+import LocalLibraryIcon from '@mui/icons-material/LocalLibrary';
+import StyleIcon from '@mui/icons-material/Style';
+import TuneIcon from '@mui/icons-material/Tune';
+import PieChartIcon from '@mui/icons-material/PieChart';
+import VerifiedIcon from '@mui/icons-material/Verified';
+import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 
 // Images & Components
-import onlineCourse   from '../images/course/online_course.png';
-import bannerTeacher  from '../images/course/course_instructor.png';
+import onlineCourse from '../images/course/online_course.png';
+import bannerTeacher from '../images/course/course_instructor.png';
 import CategoryComboBox, { normalizeCategory, dedupeCategories } from '../pages/CatergoryComboBox';
 import DurationPicker from '../pages/DurationPicker';
 
 const EMPTY_FORM = {
   title: '', description: '', instructor: '',
-  category: '', duration: '', totalSeats: 30, status: 'active',
+  category: '', duration: '', totalSeats: 30, status: 'active', price: 0,   // add price
 };
 
 const FIELD_RULES = {
   title: [
-    { test: v => v.trim().length > 0,    msg: 'Course title is required.' },
-    { test: v => v.trim().length >= 5,   msg: 'Title must be at least 5 characters.' },
+    { test: v => v.trim().length > 0, msg: 'Course title is required.' },
+    { test: v => v.trim().length >= 5, msg: 'Title must be at least 5 characters.' },
     { test: v => v.trim().length <= 100, msg: 'Title cannot exceed 100 characters.' },
   ],
   description: [
-    { test: v => v.trim().length > 0,    msg: 'Description is required.' },
-    { test: v => v.trim().length <= 1000,msg: 'Description cannot exceed 1000 characters.' },
+    { test: v => v.trim().length > 0, msg: 'Description is required.' },
+    { test: v => v.trim().length <= 1000, msg: 'Description cannot exceed 1000 characters.' },
   ],
   instructor: [
-    { test: v => v.trim().length > 0,    msg: 'Instructor name is required.' },
-    { test: v => v.trim().length >= 2,   msg: 'Instructor name must be at least 2 characters.' },
+    { test: v => v.trim().length > 0, msg: 'Instructor name is required.' },
+    { test: v => v.trim().length >= 2, msg: 'Instructor name must be at least 2 characters.' },
     { test: v => /^[a-zA-Z\s.'-]+$/.test(v.trim()), msg: 'Instructor name may only contain letters, spaces, and basic punctuation.' },
   ],
   category: [
-    { test: v => v.trim().length > 0,    msg: 'Category is required.' },
-    { test: v => v.trim().length >= 2,   msg: 'Category must be at least 2 characters.' },
-    { test: v => v.trim().length <= 50,  msg: 'Category cannot exceed 50 characters.' },
+    { test: v => v.trim().length > 0, msg: 'Category is required.' },
+    { test: v => v.trim().length >= 2, msg: 'Category must be at least 2 characters.' },
+    { test: v => v.trim().length <= 50, msg: 'Category cannot exceed 50 characters.' },
   ],
   duration: [
-    { test: v => v.trim().length <= 50,  msg: 'Duration cannot exceed 50 characters.' },
+    { test: v => v.trim().length <= 50, msg: 'Duration cannot exceed 50 characters.' },
   ],
   totalSeats: [
-    { test: v => !isNaN(v) && Number(v) > 0,    msg: 'Total seats must be a positive number.' },
-    { test: v => Number(v) >= 1,                msg: 'Minimum 1 seat is required.' },
-    { test: v => Number(v) <= 1000,             msg: 'Maximum 1000 seats allowed.' },
-    { test: v => Number.isInteger(Number(v)),   msg: 'Seats must be a whole number.' },
+    { test: v => !isNaN(v) && Number(v) > 0, msg: 'Total seats must be a positive number.' },
+    { test: v => Number(v) >= 1, msg: 'Minimum 1 seat is required.' },
+    { test: v => Number(v) <= 1000, msg: 'Maximum 1000 seats allowed.' },
+    { test: v => Number.isInteger(Number(v)), msg: 'Seats must be a whole number.' },
   ],
 };
 
@@ -109,10 +109,10 @@ const CharCount = ({ value, max }) => {
 };
 
 const TOAST_META = {
-  success: { icon: <CheckCircleIcon   style={{ fontSize: '18px', flexShrink: 0 }} />, bg: '#f0faf4', border: '#b7dfc6', text: '#1a6636', bar: '#27ae60' },
+  success: { icon: <CheckCircleIcon style={{ fontSize: '18px', flexShrink: 0 }} />, bg: '#f0faf4', border: '#b7dfc6', text: '#1a6636', bar: '#27ae60' },
   warning: { icon: <ReportProblemIcon style={{ fontSize: '18px', flexShrink: 0 }} />, bg: '#fffbf0', border: '#f5dfa0', text: '#7a5500', bar: '#f39c12' },
-  error:   { icon: <ErrorOutlineIcon  style={{ fontSize: '18px', flexShrink: 0 }} />, bg: '#fff5f5', border: '#f5c6cb', text: '#9b1c1c', bar: '#e74c3c' },
-  info:    { icon: <InfoOutlinedIcon  style={{ fontSize: '18px', flexShrink: 0 }} />, bg: '#f0f4ff', border: '#bfcffa', text: '#1a3a99', bar: '#3b6fd4' },
+  error: { icon: <ErrorOutlineIcon style={{ fontSize: '18px', flexShrink: 0 }} />, bg: '#fff5f5', border: '#f5c6cb', text: '#9b1c1c', bar: '#e74c3c' },
+  info: { icon: <InfoOutlinedIcon style={{ fontSize: '18px', flexShrink: 0 }} />, bg: '#f0f4ff', border: '#bfcffa', text: '#1a3a99', bar: '#3b6fd4' },
 };
 
 const ToastCard = ({ toast, onDismiss }) => {
@@ -149,23 +149,23 @@ const MyCourses = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
 
-  const [courses, setCourses]   = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
-  const [toasts, setToasts]     = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [toasts, setToasts] = useState([]);
 
-  const [modalOpen, setModalOpen]             = useState(false);
-  const [editingId, setEditingId]             = useState(null);
-  const [form, setForm]                       = useState(EMPTY_FORM);
-  const [originalForm, setOriginalForm]       = useState(null);   
-  const [fieldErrors, setFieldErrors]         = useState({});
-  const [touched, setTouched]                 = useState({});
-  const [saving, setSaving]                   = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [originalForm, setOriginalForm] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [saving, setSaving] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
-  const [deleteId, setDeleteId]         = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting]         = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (user && user.role !== 'instructor') navigate('/student-home');
@@ -204,16 +204,17 @@ const MyCourses = () => {
   const openEdit = (course) => {
     setEditingId(course._id);
     const snapshot = {
-      title:       course.title       || '',
+      title: course.title || '',
       description: course.description || '',
-      instructor:  course.instructor  || '',
-      category:    course.category    || '',
-      duration:    course.duration    || '',
-      totalSeats:  course.totalSeats  || 30,
-      status:      course.status      || 'active',
+      instructor: course.instructor || '',
+      category: course.category || '',
+      duration: course.duration || '',
+      totalSeats: course.totalSeats || 30,
+      status: course.status || 'active',
+      price: course.price || 0,   // add price
     };
     setForm(snapshot);
-    setOriginalForm(snapshot);  
+    setOriginalForm(snapshot);
     setFieldErrors({}); setTouched({}); setSubmitAttempted(false);
     setModalOpen(true);
   };
@@ -312,14 +313,14 @@ const MyCourses = () => {
     borderColor: fieldErrors[name] && touched[name]
       ? '#e74c3c'
       : touched[name] && !fieldErrors[name]
-      ? '#27ae60'
-      : '#e0e0e0',
+        ? '#27ae60'
+        : '#e0e0e0',
     backgroundColor: fieldErrors[name] && touched[name] ? '#fff8f8' : '#fafafa',
   });
 
   const requiredFields = ['title', 'description', 'instructor', 'category'];
-  const filledCount    = requiredFields.filter(f => form[f]?.trim().length > 0 && !validateField(f, form[f])).length;
-  const progressPct    = Math.round((filledCount / requiredFields.length) * 100);
+  const filledCount = requiredFields.filter(f => form[f]?.trim().length > 0 && !validateField(f, form[f])).length;
+  const progressPct = Math.round((filledCount / requiredFields.length) * 100);
 
   return (
     <>
@@ -531,9 +532,9 @@ const MyCourses = () => {
                 </thead>
                 <tbody>
                   {courses.map(course => {
-                    const pct      = seatPct(course);
+                    const pct = seatPct(course);
                     const barColor = pct >= 90 ? '#e74c3c' : pct >= 70 ? '#f39c12' : '#00b4b4';
-                    
+
                     return (
                       <tr key={course._id} className="course-card-row">
                         {/* Course Details */}
@@ -583,8 +584,8 @@ const MyCourses = () => {
                           <span style={{
                             ...styles.statusBadge,
                             backgroundColor: course.status === 'active' ? '#e0fcf3' : '#f1f5f9',
-                            color:           course.status === 'active' ? '#0d9468' : '#64748b',
-                            border:          course.status === 'active' ? '1px solid #99e8cc' : '1px solid #cbd5e1'
+                            color: course.status === 'active' ? '#0d9468' : '#64748b',
+                            border: course.status === 'active' ? '1px solid #99e8cc' : '1px solid #cbd5e1'
                           }}>
                             {course.status === 'active' ? '● Active' : '○ Inactive'}
                           </span>
@@ -780,6 +781,24 @@ const MyCourses = () => {
                         <FieldError msg={touched.totalSeats ? fieldErrors.totalSeats : ''} />
                       </div>
                     </div>
+                    <div style={styles.formGroup}>
+                      <div className="field-label-row">
+                        <label style={styles.label} htmlFor="f-price">Price (USD)</label>
+                        <span style={{ fontSize: '11px', color: '#bbb', marginLeft: '4px' }}>(0 = Free)</span>
+                      </div>
+                      <input
+                        id="f-price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="f-input"
+                        style={styles.input}
+                        placeholder="0.00"
+                        value={form.price}
+                        onChange={e => handleChange('price', parseFloat(e.target.value) || 0)}
+                        onBlur={() => handleBlur('price')}
+                      />
+                    </div>
                   </div>
 
                   <div style={{ height: '1px', backgroundColor: '#f0f0f0', margin: '2px 0' }} />
@@ -887,87 +906,87 @@ const styles = {
   blob1: { position: 'absolute', top: '-60px', right: '35%', width: '240px', height: '240px', borderRadius: '50%', background: 'rgba(243,157,18,0.31)', pointerEvents: 'none' },
   blob2: { position: 'absolute', bottom: '-40px', right: '-1%', width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(243,156,18,0.31)', pointerEvents: 'none' },
   heroInner: { position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '40px', maxWidth: '1100px', margin: '0 auto' },
-  heroLeft:  { flex: 1, maxWidth: '500px' },
-  heroTitle:   { fontSize: '48px', fontWeight: '800', color: '#8b3801', margin: '0 0 18px', lineHeight: '1.2' },
-  heroSub:     { fontSize: '20px', color: '#463003', lineHeight: '1.7', margin: '0 0 30px' },
-  heroBtns:    { display: 'flex', gap: '14px', flexWrap: 'wrap' },
+  heroLeft: { flex: 1, maxWidth: '500px' },
+  heroTitle: { fontSize: '48px', fontWeight: '800', color: '#8b3801', margin: '0 0 18px', lineHeight: '1.2' },
+  heroSub: { fontSize: '20px', color: '#463003', lineHeight: '1.7', margin: '0 0 30px' },
+  heroBtns: { display: 'flex', gap: '14px', flexWrap: 'wrap' },
   heroBtnSecondary: { backgroundColor: '#fff', color: '#f39c12', border: '1.5px solid #f39c12', padding: '13px 28px', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', fontWeight: '700', transition: 'all 0.2s' },
-  heroRight:   { position: 'relative', width: '360px', height: '300px', flexShrink: 0 },
-  heroCircle:  { position: 'absolute', top: '65%', left: '50%', transform: 'translate(-50%,-50%)', width: '480px', height: '480px', borderRadius: '50%', background: 'linear-gradient(135deg,#f39c12,#e67e22)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 40px rgba(243,156,18,0.35)' },
+  heroRight: { position: 'relative', width: '360px', height: '300px', flexShrink: 0 },
+  heroCircle: { position: 'absolute', top: '65%', left: '50%', transform: 'translate(-50%,-50%)', width: '480px', height: '480px', borderRadius: '50%', background: 'linear-gradient(135deg,#f39c12,#e67e22)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 40px rgba(243,156,18,0.35)' },
 
   featuresRow: { display: 'flex', gap: '20px', padding: '30px 60px', flexWrap: 'wrap', justifyContent: 'center' },
   featureCard: { backgroundColor: '#fff', borderRadius: '12px', padding: '30px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '12px', boxShadow: '0 3px 12px rgba(0,0,0,0.04)', flex: '1', minWidth: '200px', border: '1px solid #f0f0f0', transition: 'transform 0.2s ease, box-shadow 0.2s ease' },
-  featureIconWrap: { color: '#00b4b4', marginBottom: '8px' }, 
+  featureIconWrap: { color: '#00b4b4', marginBottom: '8px' },
   featureIcon: { fontSize: '40px', color: '#00a89d' },
   featureTitle: { fontSize: '16px', fontWeight: 'bold', color: '#2c3e50', margin: 0 },
   featureDesc: { color: '#888', fontSize: '13px', margin: 0, lineHeight: '1.5' },
 
-  container:     { padding: '20px 40px 60px', maxWidth: '1400px', margin: '0 auto' },
+  container: { padding: '20px 40px 60px', maxWidth: '1400px', margin: '0 auto' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-  sectionTitle:  { fontSize: '24px', color: '#1e293b', margin: 0, fontWeight: '800', letterSpacing: '-0.5px' },
+  sectionTitle: { fontSize: '24px', color: '#1e293b', margin: 0, fontWeight: '800', letterSpacing: '-0.5px' },
   createBtn: { backgroundColor: '#f39c12', color: '#fff', border: 'none', padding: '11px 22px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '7px', transition: 'all 0.2s' },
 
-  errorBox:    { backgroundColor: '#fdecea', color: '#e74c3c', padding: '14px 18px', borderRadius: '10px', marginBottom: '16px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' },
+  errorBox: { backgroundColor: '#fdecea', color: '#e74c3c', padding: '14px 18px', borderRadius: '10px', marginBottom: '16px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' },
   loadingWrap: { textAlign: 'center', padding: '60px' },
-  spinner:     { width: '36px', height: '36px', border: '3px solid #e2e8f0', borderTop: '3px solid #00b4b4', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' },
+  spinner: { width: '36px', height: '36px', border: '3px solid #e2e8f0', borderTop: '3px solid #00b4b4', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' },
   loadingText: { color: '#64748b', fontSize: '15px' },
-  
-  empty:       { textAlign: 'center', padding: '80px 20px', backgroundColor: '#fff', borderRadius: '16px', border: '1px dashed #cbd5e1' },
+
+  empty: { textAlign: 'center', padding: '80px 20px', backgroundColor: '#fff', borderRadius: '16px', border: '1px dashed #cbd5e1' },
   emptyIconBg: { width: '80px', height: '80px', backgroundColor: '#fff7ed', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' },
-  emptyText:   { fontSize: '20px', color: '#1e293b', fontWeight: '700', marginBottom: '8px' },
-  emptyHint:   { fontSize: '15px', color: '#64748b' },
+  emptyText: { fontSize: '20px', color: '#1e293b', fontWeight: '700', marginBottom: '8px' },
+  emptyHint: { fontSize: '15px', color: '#64748b' },
 
 
   tableWrap: { overflow: 'hidden', paddingBottom: '20px' },
-  table:     { width: '100%', borderCollapse: 'separate', borderSpacing: '0 12px', tableLayout: 'fixed' },
+  table: { width: '100%', borderCollapse: 'separate', borderSpacing: '0 12px', tableLayout: 'fixed' },
   th: { padding: '10px 12px', textAlign: 'left', borderBottom: 'none' },
   thContent: { display: 'flex', alignItems: 'center', gap: '6px', color: '#e67e22', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em' },
   thIcon: { fontSize: '16px', color: '#f39c12' },
-  
+
   td: { padding: '16px 12px', verticalAlign: 'middle' },
-  
+
   categoryTag: { backgroundColor: '#fff7ed', color: '#e67e22', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.02em', border: '1px solid #fdba74' },
   barWrap: { height: '8px', backgroundColor: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: '999px', transition: 'width 0.4s ease' },
   statusBadge: { padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' },
 
- 
+
   overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' },
-  modal:   { backgroundColor: '#fff', borderRadius: '18px', width: '100%', maxWidth: '900px', maxHeight: '92vh', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', display: 'flex', overflow: 'hidden' },
+  modal: { backgroundColor: '#fff', borderRadius: '18px', width: '100%', maxWidth: '900px', maxHeight: '92vh', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', display: 'flex', overflow: 'hidden' },
 
   modalLeft: { width: '270px', flexShrink: 0, background: 'linear-gradient(155deg, #e6940f 45%, #eead58 60%, #f0cd91 80%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 24px 40px', textAlign: 'center' },
   illustrationTitle: { fontSize: '19px', fontWeight: '700', color: '#5a2d00', margin: '0 0 8px' },
-  illustrationSub:   { fontSize: '12px', color: '#7a4400', lineHeight: '1.65', margin: '0 0 20px', whiteSpace: 'pre-line' },
+  illustrationSub: { fontSize: '12px', color: '#7a4400', lineHeight: '1.65', margin: '0 0 20px', whiteSpace: 'pre-line' },
   progressWrap: { width: '100%', backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: '10px', padding: '12px 14px' },
-  progressBg:   { height: '6px', backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: '999px', overflow: 'hidden' },
+  progressBg: { height: '6px', backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: '999px', overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: '#5a2d00', borderRadius: '999px', transition: 'width 0.35s ease' },
 
-  modalRight:  { flex: 1, display: 'flex', flexDirection: 'column', padding: '30px 32px', overflowY: 'auto' },
+  modalRight: { flex: 1, display: 'flex', flexDirection: 'column', padding: '30px 32px', overflowY: 'auto' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
-  modalTitle:  { fontSize: '20px', color: '#2c3e50', fontWeight: '700', margin: 0 },
-  closeBtn:    { background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px', borderRadius: '6px', transition: 'background 0.15s', flexShrink: 0 },
+  modalTitle: { fontSize: '20px', color: '#2c3e50', fontWeight: '700', margin: 0 },
+  closeBtn: { background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px', borderRadius: '6px', transition: 'background 0.15s', flexShrink: 0 },
 
   formFields: { display: 'flex', flexDirection: 'column', gap: '22px' },
-  formRow:    { display: 'flex', gap: '18px' },
-  formGroup:  { display: 'flex', flexDirection: 'column', flex: 1 },
-  label:      { fontSize: '13px', fontWeight: '600', color: '#444' },
+  formRow: { display: 'flex', gap: '18px' },
+  formGroup: { display: 'flex', flexDirection: 'column', flex: 1 },
+  label: { fontSize: '13px', fontWeight: '600', color: '#444' },
 
   input: { padding: '11px 14px', borderRadius: '8px', border: '1.5px solid #e0e0e0', fontSize: '14px', backgroundColor: '#fafafa', color: '#2c3e50', transition: 'border-color 0.2s, box-shadow 0.2s, background-color 0.2s', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' },
 
   fieldError: { display: 'flex', alignItems: 'center', gap: '5px', color: '#e74c3c', fontSize: '12px', marginTop: '5px', animation: 'slideDown 0.18s ease' },
-  infoAlert:  { display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#e8f0fe', border: '1px solid #c5d9f7', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: '#1a73e8', lineHeight: '1.55', marginTop: '6px' },
+  infoAlert: { display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#e8f0fe', border: '1px solid #c5d9f7', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: '#1a73e8', lineHeight: '1.55', marginTop: '6px' },
 
   modalActions: { display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px', paddingTop: '18px', borderTop: '1px solid #f0f0f0' },
-  resetBtn:   { padding: '10px 28px', backgroundColor: '#fff', color: '#f39c12', border: '1.5px solid #f39c12', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', letterSpacing: '0.05em', transition: 'background-color 0.2s' },
+  resetBtn: { padding: '10px 28px', backgroundColor: '#fff', color: '#f39c12', border: '1.5px solid #f39c12', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', letterSpacing: '0.05em', transition: 'background-color 0.2s' },
   confirmBtn: { padding: '10px 28px', backgroundColor: '#f39c12', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', letterSpacing: '0.05em', transition: 'background-color 0.2s', display: 'flex', alignItems: 'center', gap: '8px' },
   btnSpinner: { width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTop: '2px solid #fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.6s linear infinite' },
 
-  deleteModal:    { backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '420px', padding: '36px 32px', boxShadow: '0 20px 60px rgba(0,0,0,0.22)', textAlign: 'center' },
+  deleteModal: { backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '420px', padding: '36px 32px', boxShadow: '0 20px 60px rgba(0,0,0,0.22)', textAlign: 'center' },
   deleteIconWrap: { width: '64px', height: '64px', backgroundColor: '#fdecea', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' },
-  deleteTitle:    { fontSize: '20px', color: '#2c3e50', fontWeight: '700', margin: '0 0 12px' },
-  deleteTarget:   { backgroundColor: '#f9f9f9', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '14px', textAlign: 'left' },
-  deleteWarning:  { display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#7a5a00', marginTop: '10px', lineHeight: '1.5' },
-  deleteDesc:     { color: '#888', fontSize: '13px', marginBottom: '24px', lineHeight: '1.6' },
+  deleteTitle: { fontSize: '20px', color: '#2c3e50', fontWeight: '700', margin: '0 0 12px' },
+  deleteTarget: { backgroundColor: '#f9f9f9', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '14px', textAlign: 'left' },
+  deleteWarning: { display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#7a5a00', marginTop: '10px', lineHeight: '1.5' },
+  deleteDesc: { color: '#888', fontSize: '13px', marginBottom: '24px', lineHeight: '1.6' },
 };
 
 export default MyCourses;
