@@ -1,0 +1,321 @@
+openapi: 3.0.3
+info:
+  title: Payment Service API
+  description: >
+    Stripe-powered payment microservice for the Online Learning Platform.
+    No webhook required — payment confirmation is handled directly via the
+    `/confirm` endpoint after Stripe.js resolves on the client side.
+  version: 2.0.0
+
+servers:
+  - url: http://localhost:3006
+    description: Local development
+
+tags:
+  - name: Payments
+    description: Payment operations for students
+
+paths:
+
+  # POST /api/payments/create-intent
+  /api/payments/create-intent:
+    post:
+      tags: [Payments]
+      summary: Step 1 — Create a Stripe PaymentIntent
+      description: >
+        Creates a Stripe PaymentIntent for a paid course and returns a
+        `clientSecret` to be used with `stripe.confirmCardPayment()` on
+        the frontend. Also persists a `pending` Payment record in the DB.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [courseId]
+              properties:
+                courseId:
+                  type: string
+                  example: "64f3a1b2c9e77b001d8e4512"
+            example:
+              courseId: "64f3a1b2c9e77b001d8e4512"
+      responses:
+        "201":
+          description: PaymentIntent created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clientSecret:
+                    type: string
+                    description: Pass this to stripe.confirmCardPayment() on the frontend
+                    example: "pi_3abc_secret_xyz"
+                  paymentId:
+                    type: string
+                    description: Internal Payment document ID
+                    example: "665f1a2b3c4d5e6f7a8b9c0d"
+                  amount:
+                    type: integer
+                    description: Amount in cents (e.g. 4999 = $49.99)
+                    example: 4999
+                  currency:
+                    type: string
+                    example: "usd"
+        "400":
+          description: Missing courseId, free course, already enrolled, or payment already completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Course not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Payment initialization failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # POST /api/payments/confirm 
+  /api/payments/confirm:
+    post:
+      tags: [Payments]
+      summary: Step 2 — Confirm payment after Stripe.js resolves
+      description: >
+        Called by the frontend **after** `stripe.confirmCardPayment()` succeeds.
+        The backend retrieves the PaymentIntent directly from Stripe to verify
+        its status (no webhook needed), marks the payment as `succeeded`,
+        and automatically creates an enrollment record.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentIntentId]
+              properties:
+                paymentIntentId:
+                  type: string
+                  example: "pi_3abcXYZ123"
+            example:
+              paymentIntentId: "pi_3abcXYZ123"
+      responses:
+        "200":
+          description: Payment confirmed and enrollment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Payment confirmed and enrollment created"
+                  payment:
+                    $ref: '#/components/schemas/Payment'
+                  enrollmentId:
+                    type: string
+                    nullable: true
+                    example: "665f1a2b3c4d5e6f7a8b9c0e"
+        "400":
+          description: Missing paymentIntentId or payment not succeeded on Stripe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Payment record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Payment confirmation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # GET /api/payments/my 
+  /api/payments/my:
+    get:
+      tags: [Payments]
+      summary: Get logged-in user's payment history
+      description: >
+        Returns all payments belonging to the currently authenticated user,
+        sorted by most recent first.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of the user's payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payment'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # GET /api/payments/:id 
+  /api/payments/{id}:
+    get:
+      tags: [Payments]
+      summary: Get a single payment by ID
+      description: >
+        Returns a single payment document. Users can only retrieve their own
+        payments.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: The MongoDB ObjectId of the payment
+          schema:
+            type: string
+            example: "665f1a2b3c4d5e6f7a8b9c0d"
+      responses:
+        "200":
+          description: Payment object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: Forbidden — payment belongs to another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+# Reusable components 
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from the User Auth Service login endpoint
+
+  schemas:
+
+    Payment:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "665f1a2b3c4d5e6f7a8b9c0d"
+        userId:
+          type: string
+          example: "user_student_1"
+        userEmail:
+          type: string
+          example: "student@example.com"
+        userName:
+          type: string
+          example: "Jane Smith"
+        courseId:
+          type: string
+          example: "64f3a1b2c9e77b001d8e4512"
+        courseTitle:
+          type: string
+          example: "Guitar Basics"
+        enrollmentId:
+          type: string
+          nullable: true
+          example: "665f1a2b3c4d5e6f7a8b9c0e"
+        stripePaymentIntentId:
+          type: string
+          example: "pi_3abcXYZ123"
+        stripeCustomerId:
+          type: string
+          example: "cus_test_789"
+        stripeChargeId:
+          type: string
+          nullable: true
+          example: "ch_test_456"
+        amount:
+          type: integer
+          description: Amount in cents
+          example: 4999
+        currency:
+          type: string
+          example: "usd"
+        status:
+          type: string
+          enum: [pending, succeeded, failed, refunded, cancelled]
+          example: "succeeded"
+        failureCode:
+          type: string
+          nullable: true
+          example: "card_declined"
+        failureMessage:
+          type: string
+          nullable: true
+          example: "Your card was declined."
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-01-15T10:31:00Z"
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "An error occurred"
