@@ -7,6 +7,7 @@ const courseSchema = new mongoose.Schema({
   instructorId:  { type: String },
   category:      { type: String, required: true },
   duration:      { type: String },
+  price:         { type: Number, default: 0 },   // add price
   totalSeats:    { type: Number, default: 50 },
   enrolledCount: { type: Number, default: 0 },
   status:        { type: String, enum: ['active', 'inactive'], default: 'active' },
