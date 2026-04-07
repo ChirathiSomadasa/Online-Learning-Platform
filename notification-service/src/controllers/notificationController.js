@@ -11,7 +11,7 @@ const getTransporter = () =>
 const buildHTML = (data) => {
   if (data.type === 'welcome')
     return `<h2>Welcome!</h2><p>Hi ${data.userName}, welcome to the Online Learning Platform!</p>`
-  
+
   if (data.type === 'enrollment_confirmation')
     return `<h2>Enrolled!</h2>
   <p>Hi ${data.userName},</p>
@@ -21,36 +21,27 @@ const buildHTML = (data) => {
   if (data.type === 'new_course')
     return `<h2>New Course!</h2>
   <p><b>${data.courseTitle}</b> by ${data.instructor} is now available.</p>`
-  
+
   if (data.type === 'payment_confirmation')
     return `<h2>Payment Confirmed</h2>
   <p>Hi ${data.userName},</p>
   <p>Your payment for <b>${data.courseTitle}</b> was successful.</p>
   <p>${data.message}</p>`
-  
+
   return `<p>${data.message || 'Notification from Online Learning Platform'}</p>`
 }
 
 // POST /api/notifications/send — called by Student 1, 2, and 3
 exports.sendNotification = async (req, res) => {
-  const {
-    to,
-    type,
-    userName,
-    courseTitle,
-    instructor,
-    enrollmentId,
-    message,
-  } = req.body;
-
+  const body = req.body || {}
   const log = await Notification.create({
-    to,
-    type,
-    userName,
-    courseTitle,
-    instructor,
-    enrollmentId,
-    message,
+    to: body.to,
+    type: body.type,
+    userName: body.userName,
+    courseTitle: body.courseTitle,
+    instructor: body.instructor,
+    enrollmentId: body.enrollmentId,
+    message: body.message,
     status: 'pending',
   })
 
@@ -60,19 +51,18 @@ exports.sendNotification = async (req, res) => {
         from: process.env.EMAIL_USER,
         to: req.body.to,
         subject:
-          req.body.type === 'welcome' 
+          req.body.type === 'welcome'
             ? 'Welcome to Online Learning Platform'
             : req.body.type === 'enrollment_confirmation'
               ? `Enrolled: ${req.body.courseTitle}`
               : req.body.type === 'payment_confirmation'
-                ? `Payment Confirmed: ${req.body.courseTitle} ${(req.body.message)}`
+                ? `Payment Confirmed: ${req.body.courseTitle} ${req.body.message}`
                 : `New Course: ${req.body.courseTitle}`,
         html: buildHTML(req.body),
       })
     }
     await Notification.findByIdAndUpdate(log._id, { status: 'sent' })
     res.json({ message: 'Notification sent', id: log._id })
-    
   } catch (err) {
     await Notification.findByIdAndUpdate(log._id, { status: 'failed' })
     res.status(500).json({ message: 'Failed', error: err.message })
