@@ -5,7 +5,6 @@ const jwt = require('jsonwebtoken');
 const NOTIFY_URL =
   process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004';
 
-
 const serviceToken = () =>
   jwt.sign(
     { id: 'course-catalog-service', role: 'service', name: 'Course Catalog' },
@@ -13,14 +12,38 @@ const serviceToken = () =>
     { expiresIn: '1m' }
   );
 
-// GET /api/courses — list all active courses
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const sanitizeCourseBody = (body) => ({
+  title:        body.title,
+  description:  body.description,
+  category:     body.category,
+  instructor:   body.instructor,
+  price:        body.price,
+  status:       body.status,
+  maxSeats:     body.maxSeats,
+  totalSeats:   body.totalSeats,
+  duration:     body.duration,
+  instructorId: body.instructorId,
+});
+
+// GET /api/courses — public: active courses only (student catalog view)
 exports.getAllCourses = async (req, res) => {
   try {
-    const { category, search } = req.query;
     const filter = { status: 'active' };
 
-    if (category) filter.category = category;
-    if (search) filter.title = { $regex: search, $options: 'i' };
+    const ALLOWED_CATEGORIES = ['development', 'design', 'business', 'marketing', 'other'];
+    if (req.query.category) {
+      if (!ALLOWED_CATEGORIES.includes(req.query.category)) {
+        return res.status(400).json({ message: 'Invalid category value' });
+      }
+      filter.category = req.query.category;
+    }
+
+    if (req.query.search) {
+      const safeSearch = escapeRegex(String(req.query.search).trim());
+      filter.title = { $regex: safeSearch, $options: 'i' };
+    }
 
     const courses = await Course.find(filter).sort({ createdAt: -1 });
     res.json(courses);
@@ -29,7 +52,18 @@ exports.getAllCourses = async (req, res) => {
   }
 };
 
-// GET /api/courses/:id — called by Enrollment Service (Student 3)
+// GET /api/courses/my-courses — protected: ALL courses for the logged-in instructor
+exports.getInstructorCourses = async (req, res) => {
+  try {
+    // req.user is populated by requireAuth middleware from the JWT
+    const courses = await Course.find({ instructorId: req.user.id }).sort({ createdAt: -1 });
+    res.json(courses);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET /api/courses/:id
 exports.getCourseById = async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
@@ -40,11 +74,13 @@ exports.getCourseById = async (req, res) => {
   }
 };
 
-// POST /api/courses — create a new course
-// INTEGRATION OUT: calls Notification Service (Student 4)
+// POST /api/courses
 exports.createCourse = async (req, res) => {
   try {
-    const course = await Course.create(req.body);
+    const courseData = sanitizeCourseBody(req.body);
+    courseData.instructorId = req.user.id || req.user._id; 
+
+    const course = await Course.create(courseData);
 
     try {
       await axios.post(
@@ -55,9 +91,7 @@ exports.createCourse = async (req, res) => {
           instructor: course.instructor,
           message: `New course available: "${course.title}" by ${course.instructor}`,
         },
-        {
-          headers: { Authorization: `Bearer ${serviceToken()}` }  // ← add this
-        }
+        { headers: { Authorization: `Bearer ${serviceToken()}` } }
       );
     } catch (e) {
       console.warn('Notification service unavailable:', e.message);
@@ -69,14 +103,13 @@ exports.createCourse = async (req, res) => {
   }
 };
 
-// PUT /api/courses/:id — update course details
+// PUT /api/courses/:id
 exports.updateCourse = async (req, res) => {
   try {
-    // Prevent external tampering with enrolledCount via this endpoint
-    delete req.body.enrolledCount;
+    const courseData = sanitizeCourseBody(req.body);
 
-    const course = await Course.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
+    const course = await Course.findByIdAndUpdate(req.params.id, courseData, {
+      returnDocument: 'after',
       runValidators: true,
     });
     if (!course) return res.status(404).json({ message: 'Course not found' });
@@ -86,10 +119,10 @@ exports.updateCourse = async (req, res) => {
   }
 };
 
-// PUT /api/courses/:id/seats — called by Enrollment Service (Student 3)
+// PUT /api/courses/:id/seats
 exports.updateSeats = async (req, res) => {
   try {
-    const { action } = req.body; // 'increment' or 'decrement'
+    const { action } = req.body;
 
     if (!['increment', 'decrement'].includes(action)) {
       return res.status(400).json({ message: 'action must be increment or decrement' });
@@ -101,7 +134,7 @@ exports.updateSeats = async (req, res) => {
         : { $inc: { enrolledCount: -1 } };
 
     const course = await Course.findByIdAndUpdate(req.params.id, update, {
-     returnDocument: 'after',
+      returnDocument: 'after',
     });
     if (!course) return res.status(404).json({ message: 'Course not found' });
     res.json({ message: 'Seat count updated', course });
@@ -110,7 +143,7 @@ exports.updateSeats = async (req, res) => {
   }
 };
 
-// DELETE /api/courses/:id — remove course
+// DELETE /api/courses/:id
 exports.deleteCourse = async (req, res) => {
   try {
     const course = await Course.findByIdAndDelete(req.params.id);

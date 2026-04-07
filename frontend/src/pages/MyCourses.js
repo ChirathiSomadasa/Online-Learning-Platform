@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  getAllCourses, createCourse, updateCourse, deleteCourse,
+  getAllCourses, createCourse, updateCourse, deleteCourse, getInstructorCourses,
 } from '../services/courseService';
 
 // MUI Icons
@@ -174,14 +174,14 @@ const MyCourses = () => {
   useEffect(() => { fetchCourses(); }, []);
 
   const fetchCourses = async () => {
-    setLoading(true); setError('');
-    try {
-      const data = await getAllCourses();
-      setCourses(data.filter(c => c.instructorId === user?._id));
-    } catch {
-      setError('Failed to load courses. Ensure the Course Catalog Service is running.');
-    } finally { setLoading(false); }
-  };
+  setLoading(true); setError('');
+  try {
+    const data = await getInstructorCourses(token);
+    setCourses(data);
+  } catch {
+    setError('Failed to load courses. Ensure the Course Catalog Service is running.');
+  } finally { setLoading(false); }
+};
 
   const pushToast = useCallback((msg, type = 'success') => {
     const id = Date.now() + Math.random();
