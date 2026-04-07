@@ -13,7 +13,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import Courses from './pages/Courses'; 
 import MyCourses from './pages/MyCourses';
 import Enrollments from './pages/Enrollments';
-//import NotificationsPage from './pages/NotificationsPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 // Layout WITH header and footer
 const WithLayout = ({ children }) => (
@@ -41,7 +41,7 @@ function App() {
           <Route path="/instructor-home" element={<WithLayout><InstructorHome /></WithLayout>} />
           <Route path="/courses" element={<WithLayout><Courses /></WithLayout>} />     
           <Route path="/my-courses" element={<WithLayout><MyCourses /></WithLayout>} /> 
-          {/* <Route path="/notifications" element={<WithLayout><NotificationsPage /></WithLayout>} /> */}
+          <Route path="/notifications" element={<WithLayout><NotificationsPage /></WithLayout>} />
           <Route path="/enrollments" element={<WithLayout><Enrollments /></WithLayout>} />
           <Route path="/courses" element={<WithLayout><Courses /></WithLayout>} />
           <Route path="/my-courses" element={<WithLayout><MyCourses /></WithLayout>} />
