@@ -11,23 +11,48 @@ const getTransporter = () =>
 const buildHTML = (data) => {
   if (data.type === 'welcome')
     return `<h2>Welcome!</h2><p>Hi ${data.userName}, welcome to the Online Learning Platform!</p>`
+  
   if (data.type === 'enrollment_confirmation')
     return `<h2>Enrolled!</h2>
-
   <p>Hi ${data.userName},</p>
   <p>You are enrolled in <b>${data.courseTitle}</b> by ${data.instructor}.</p>
   <p>Enrollment ID: ${data.enrollmentId}</p>`
 
   if (data.type === 'new_course')
     return `<h2>New Course!</h2>
-
   <p><b>${data.courseTitle}</b> by ${data.instructor} is now available.</p>`
+  
+  if (data.type === 'payment_confirmation')
+    return `<h2>Payment Confirmed</h2>
+  <p>Hi ${data.userName},</p>
+  <p>Your payment for <b>${data.courseTitle}</b> was successful.</p>
+  <p>${data.message}</p>`
+  
   return `<p>${data.message || 'Notification from Online Learning Platform'}</p>`
 }
 
 // POST /api/notifications/send — called by Student 1, 2, and 3
 exports.sendNotification = async (req, res) => {
-  const log = await Notification.create({ ...req.body, status: 'pending' })
+  const {
+    to,
+    type,
+    userName,
+    courseTitle,
+    instructor,
+    enrollmentId,
+    message,
+  } = req.body;
+
+  const log = await Notification.create({
+    to,
+    type,
+    userName,
+    courseTitle,
+    instructor,
+    enrollmentId,
+    message,
+    status: 'pending',
+  })
 
   try {
     if (req.body.to && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
@@ -35,11 +60,13 @@ exports.sendNotification = async (req, res) => {
         from: process.env.EMAIL_USER,
         to: req.body.to,
         subject:
-          req.body.type === 'welcome'
+          req.body.type === 'welcome' 
             ? 'Welcome to Online Learning Platform'
             : req.body.type === 'enrollment_confirmation'
               ? `Enrolled: ${req.body.courseTitle}`
-              : `New Course: ${req.body.courseTitle}`,
+              : req.body.type === 'payment_confirmation'
+                ? `Payment Confirmed: ${req.body.courseTitle} ${(req.body.message)}`
+                : `New Course: ${req.body.courseTitle}`,
         html: buildHTML(req.body),
       })
     }
