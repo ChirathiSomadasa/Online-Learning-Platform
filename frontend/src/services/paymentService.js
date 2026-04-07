@@ -7,9 +7,7 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-/**
- * Step 1 – create a PaymentIntent and get back the clientSecret.
- */
+// Step 1 — create a PaymentIntent and get back the clientSecret
 export const createPaymentIntent = async (courseId) => {
   const res = await axios.post(
     `${API}/api/payments/create-intent`,
@@ -19,9 +17,7 @@ export const createPaymentIntent = async (courseId) => {
   return res.data; // { clientSecret, paymentId, amount, currency }
 };
 
-/**
- * Step 2 – tell the backend the Stripe.js confirmation succeeded.
- */
+// Step 2 — tell the backend the Stripe.js confirmation succeeded
 export const confirmPayment = async (paymentIntentId) => {
   const res = await axios.post(
     `${API}/api/payments/confirm`,
@@ -31,39 +27,19 @@ export const confirmPayment = async (paymentIntentId) => {
   return res.data; // { payment, enrollmentId }
 };
 
-/**
- * Fetch payment history for a user.
- */
-export const getUserPayments = async (userId) => {
+// Get logged-in user's own payment history
+export const getMyPayments = async () => {
   const res = await axios.get(
-    `${API}/api/payments/user/${userId}`,
+    `${API}/api/payments/my`,
     { headers: getAuthHeader() },
   );
   return res.data;
 };
 
-/**
- * Admin: fetch all payments (paginated).
- */
-export const getAllPayments = async (page = 1, limit = 20, status = '') => {
-  const params = { page, limit, ...(status && { status }) };
-  const res = await axios.get(`${API}/api/payments/admin/all`, {
-    headers: getAuthHeader(),
-    params,
-  });
-  return res.data;
-};
-
-/**
- * Admin: issue a refund.
- * @param {string} paymentId
- * @param {number|null} amount  – partial refund in dollars, omit for full
- */
-export const refundPayment = async (paymentId, amount = null) => {
-  const body = amount ? { amount } : {};
-  const res = await axios.post(
-    `${API}/api/payments/${paymentId}/refund`,
-    body,
+// Get a single payment by ID
+export const getPaymentById = async (paymentId) => {
+  const res = await axios.get(
+    `${API}/api/payments/${paymentId}`,
     { headers: getAuthHeader() },
   );
   return res.data;

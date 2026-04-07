@@ -204,7 +204,7 @@ const styles = {
 
   // HERO
   heroBanner: {
-    height: '340px',
+    height: '500px',
     backgroundImage: 'url("https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80&w=1920")',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
