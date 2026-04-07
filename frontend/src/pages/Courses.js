@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAllCourses, getCourseById } from '../services/courseService';
+import { createEnrollment } from '../services/enrollmentService';
 import PersonIcon        from '@mui/icons-material/Person';
 import EventSeatIcon     from '@mui/icons-material/EventSeat';
 import AccessTimeIcon    from '@mui/icons-material/AccessTime';
@@ -243,7 +244,7 @@ const pgBtn = (disabled) => ({
 
 // Main Component 
 const Courses = () => {
-  const { user } = useAuth();
+  const { user,token } = useAuth();
   const navigate = useNavigate();
 
   const [courses, setCourses]           = useState([]);
@@ -332,34 +333,49 @@ const Courses = () => {
     }
   };
 
+  //     const handleEnroll = async () => {
+  //   if (!selected) return;
+    
+  //   try {
+  //     // Use the enrollment service instead of direct axios call
+  //     const enrollmentData = await createEnrollment(selected._id, token);
+      
+  //     if (enrollmentData) {
+  //       toast.success('Successfully enrolled in course!');
+  //       closeModal();
+  //       // Navigate to enrollments page with success message
+  //       navigate('/enrollments', {
+  //         state: {
+  //           enrollmentSuccess: true,
+  //           message: `Successfully enrolled in ${selected.title}`
+  //         }
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error('Enrollment error:', error);
+  //     toast.error(error.response?.data?.message || 'Failed to enroll in course');
+  //   }
+  // };
+
   const handleFreeEnroll = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        'http://localhost:3003/api/enrollment',
-        { courseId: selected._id },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+  try {
+    const enrollmentData = await createEnrollment(selected._id, token);
+    
+    if (enrollmentData) {
+      toast.success('Successfully enrolled in course!');
+      closeModal();
+      navigate('/enrollments', {
+        state: {
+          enrollmentSuccess: true,
+          message: `Successfully enrolled in ${selected.title}`
         }
-      );
-      if (response.data) {
-        toast.success('Successfully enrolled in course!');
-        closeModal();
-        navigate('/enrollments', {
-          state: {
-            enrollmentSuccess: true,
-            message: `Successfully enrolled in ${selected.title}`,
-          },
-        });
-      }
-    } catch (err) {
-      console.error('Enrollment error:', err);
-      toast.error(err.response?.data?.message || 'Failed to enroll in course');
+      });
     }
-  };
+  } catch (err) {
+    console.error('Enrollment error:', err);
+    toast.error(err.response?.data?.message || 'Failed to enroll in course');
+  }
+};
 
   // Called after successful Stripe payment
   const handlePaymentSuccess = (enrollmentId) => {
