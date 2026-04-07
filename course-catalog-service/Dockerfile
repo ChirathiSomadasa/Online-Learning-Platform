@@ -3,6 +3,7 @@ FROM node:18-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
+COPY swagger.yaml ./
 
 COPY src/ ./src/
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup

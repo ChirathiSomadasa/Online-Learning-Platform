@@ -212,6 +212,7 @@ exports.confirmPayment = async (req, res) => {
       userName:    payment.userName,
       courseTitle: payment.courseTitle,
       message:     `Payment of ${(payment.amount / 100).toFixed(2)} ${payment.currency.toUpperCase()} confirmed. Payment ID: ${payment._id}.`,
+
     }, {
       headers: { Authorization: `Bearer ${serviceToken()}` },
     }).catch((e) => console.warn('[confirmPayment] notification failed:', e.message));

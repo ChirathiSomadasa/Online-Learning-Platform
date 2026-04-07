@@ -30,6 +30,13 @@ export const updateCourse = async (id, data, token) => {
   return response.data;
 };
 
+export const getInstructorCourses = async (token) => {
+  const response = await axios.get(`${COURSE_API}/api/courses/my-courses`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
 export const deleteCourse = async (id, token) => {
   const response = await axios.delete(`${COURSE_API}/api/courses/${id}`, {
     headers: { Authorization: `Bearer ${token}` },

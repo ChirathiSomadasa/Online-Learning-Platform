@@ -6,12 +6,15 @@ const {
   updateCourse,
   updateSeats,
   deleteCourse,
+  getInstructorCourses, 
 } = require('../controllers/courseController');
 const { requireAuth } = require('../middleware/authMiddleware');
 
 // Public routes
-router.get('/', getAllCourses);                
-router.get('/:id', getCourseById);             
+router.get('/', getAllCourses); 
+router.get('/my-courses', requireAuth, getInstructorCourses);                
+router.get('/:id', getCourseById);  
+          
 
 // Protected routes — require valid JWT
 router.post('/', requireAuth, createCourse);            
