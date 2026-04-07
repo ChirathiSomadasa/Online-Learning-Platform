@@ -14,24 +14,34 @@ const serviceToken = () =>
     { expiresIn: '1m' }
   );
 
-//  Helper: get or create Stripe customer 
+// Input sanitizers 
+// Prevents NoSQL injection by ensuring values are always plain strings
+const sanitizeString = (value) => {
+  if (value === null || value === undefined) return '';
+  return String(value).trim();
+};
+
+// Helper: get or create Stripe customer 
 async function getOrCreateStripeCustomer(userId, userEmail, userName) {
+  // FIX (NoSQL injection): sanitize userId before using in DB query
+  const safeUserId = sanitizeString(userId);
+
   const existing = await Payment.findOne({
-    userId,
-    stripeCustomerId: { $ne: null }
+    userId:           safeUserId,
+    stripeCustomerId: { $ne: null },
   }).sort({ createdAt: -1 }).select('stripeCustomerId').lean();
 
   if (existing?.stripeCustomerId) return existing.stripeCustomerId;
 
   const customer = await stripe.customers.create({
-    email:    userEmail,
-    name:     userName,
-    metadata: { userId },
+    email:    sanitizeString(userEmail),
+    name:     sanitizeString(userName),
+    metadata: { userId: safeUserId },
   });
   return customer.id;
 }
 
-// POST /api/payments/create-intent 
+// POST /api/payments/create-intent
 exports.createPaymentIntent = async (req, res) => {
   try {
     const { courseId } = req.body;
@@ -40,10 +50,17 @@ exports.createPaymentIntent = async (req, res) => {
     if (!courseId)
       return res.status(400).json({ message: 'courseId is required' });
 
-    // 1. Fetch course
+    // FIX 1 (SSRF): sanitize and encode courseId before using in URL path
+    const safeCourseIdRaw = sanitizeString(courseId);
+    const safeCourseIdUrl = encodeURIComponent(safeCourseIdRaw);
+
+    // FIX 2 (NoSQL injection): sanitize userId before all DB queries
+    const safeUserId = sanitizeString(userId);
+
+    // 1. Fetch course — encoded courseId prevents path traversal / SSRF
     let course;
     try {
-      const resp = await axios.get(`${COURSE_URL}/api/courses/${courseId}`);
+      const resp = await axios.get(`${COURSE_URL}/api/courses/${safeCourseIdUrl}`);
       course = resp.data;
     } catch {
       return res.status(404).json({ message: 'Course not found' });
@@ -53,18 +70,23 @@ exports.createPaymentIntent = async (req, res) => {
       return res.status(400).json({ message: 'This course does not require payment' });
 
     // 2. Guard: already succeeded payment?
-    const existingSuccess = await Payment.findOne({ userId, courseId, status: 'succeeded' });
+    const existingSuccess = await Payment.findOne({
+      userId:   safeUserId,
+      courseId: safeCourseIdRaw,
+      status:   'succeeded',
+    });
     if (existingSuccess)
       return res.status(400).json({ message: 'Payment already completed for this course' });
 
     // 3. Guard: already enrolled?
     const token = req.headers.authorization;
     try {
-      const resp = await axios.get(`${ENROLL_URL}/api/enrollment/user/${userId}`, {
-        headers: { Authorization: token },
-      });
+      const resp = await axios.get(
+        `${ENROLL_URL}/api/enrollment/user/${encodeURIComponent(safeUserId)}`,
+        { headers: { Authorization: token } },
+      );
       const alreadyEnrolled = (resp.data || []).some(
-        (e) => e.courseId === courseId && e.status === 'active',
+        (e) => sanitizeString(e.courseId) === safeCourseIdRaw && e.status === 'active',
       );
       if (alreadyEnrolled)
         return res.status(400).json({ message: 'Already enrolled in this course' });
@@ -76,24 +98,33 @@ exports.createPaymentIntent = async (req, res) => {
     const amountInCents = Math.round(course.price * 100);
 
     // 5. Stripe customer
-    const stripeCustomerId = await getOrCreateStripeCustomer(userId, userEmail, userName);
+    const stripeCustomerId = await getOrCreateStripeCustomer(
+      safeUserId,
+      sanitizeString(userEmail),
+      sanitizeString(userName),
+    );
 
     // 6. Create PaymentIntent
     const intent = await stripe.paymentIntents.create({
       amount:      amountInCents,
       currency:    'usd',
       customer:    stripeCustomerId,
-      metadata:    { userId, userEmail, courseId, courseTitle: course.title },
-      description: `Enrollment: ${course.title}`,
+      metadata:    {
+        userId:      safeUserId,
+        userEmail:   sanitizeString(userEmail),
+        courseId:    safeCourseIdRaw,
+        courseTitle: sanitizeString(course.title),
+      },
+      description: `Enrollment: ${sanitizeString(course.title)}`,
     });
 
     // 7. Save pending payment record
     const payment = await Payment.create({
-      userId,
-      userEmail,
-      userName,
-      courseId,
-      courseTitle:           course.title,
+      userId:                safeUserId,
+      userEmail:             sanitizeString(userEmail),
+      userName:              sanitizeString(userName),
+      courseId:              safeCourseIdRaw,
+      courseTitle:           sanitizeString(course.title),
       stripePaymentIntentId: intent.id,
       stripeCustomerId,
       amount:                amountInCents,
@@ -122,8 +153,15 @@ exports.confirmPayment = async (req, res) => {
     if (!paymentIntentId)
       return res.status(400).json({ message: 'paymentIntentId is required' });
 
+    // FIX 3 (NoSQL injection): sanitize both fields before DB query
+    const safeUserId          = sanitizeString(userId);
+    const safePaymentIntentId = sanitizeString(paymentIntentId);
+
     // 1. Find payment record
-    const payment = await Payment.findOne({ stripePaymentIntentId: paymentIntentId, userId });
+    const payment = await Payment.findOne({
+      stripePaymentIntentId: safePaymentIntentId,
+      userId:                safeUserId,
+    });
     if (!payment) return res.status(404).json({ message: 'Payment record not found' });
 
     // Already confirmed?
@@ -136,7 +174,7 @@ exports.confirmPayment = async (req, res) => {
     }
 
     // 2. Verify with Stripe
-    const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const intent = await stripe.paymentIntents.retrieve(safePaymentIntentId);
 
     if (intent.status !== 'succeeded') {
       payment.status         = 'failed';
@@ -167,17 +205,15 @@ exports.confirmPayment = async (req, res) => {
       console.warn('[confirmPayment] enrollment creation failed:', e.message);
     }
 
-    // 5. Notify
+    // 5. Notify (fire-and-forget)
     axios.post(`${NOTIFY_URL}/api/notifications/send`, {
       to:          payment.userEmail,
       type:        'payment_confirmation',
       userName:    payment.userName,
       courseTitle: payment.courseTitle,
-      amount:      (payment.amount / 100).toFixed(2),
-      currency:    payment.currency.toUpperCase(),
-      paymentId:   payment._id,
+      message:     `Payment of ${(payment.amount / 100).toFixed(2)} ${payment.currency.toUpperCase()} confirmed. Payment ID: ${payment._id}.`,
     }, {
-      headers: { Authorization: `Bearer ${serviceToken()}` }
+      headers: { Authorization: `Bearer ${serviceToken()}` },
     }).catch((e) => console.warn('[confirmPayment] notification failed:', e.message));
 
     res.json({
@@ -191,10 +227,12 @@ exports.confirmPayment = async (req, res) => {
   }
 };
 
-// GET /api/payments/my 
+// GET /api/payments/my
 exports.getMyPayments = async (req, res) => {
   try {
-    const payments = await Payment.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    // FIX (NoSQL injection): sanitize userId before DB query
+    const safeUserId = sanitizeString(req.user.id);
+    const payments   = await Payment.find({ userId: safeUserId }).sort({ createdAt: -1 });
     res.json(payments);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -207,7 +245,9 @@ exports.getPaymentById = async (req, res) => {
     const payment = await Payment.findById(req.params.id);
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
 
-    if (req.user.id !== payment.userId)
+    // FIX (NoSQL injection): sanitize before string comparison
+    const safeUserId = sanitizeString(req.user.id);
+    if (safeUserId !== sanitizeString(payment.userId))
       return res.status(403).json({ message: 'Forbidden' });
 
     res.json(payment);
