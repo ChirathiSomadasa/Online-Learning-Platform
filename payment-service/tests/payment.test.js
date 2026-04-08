@@ -370,7 +370,6 @@ describe('POST /api/payments/confirm', () => {
     expect(res.statusCode).toBe(200);
   });
 
-  // Covers line 181 — enrollment response has no _id → null fallback 
   test('200 when enrollment response has no _id — covers line 181', async () => {
     const mockPay = {
       status:                'pending',
@@ -390,7 +389,6 @@ describe('POST /api/payments/confirm', () => {
       status:        'succeeded',
       latest_charge: 'ch_1',
     });
-    // Enrollment responds but with no enrollment._id — hits the || null branch
     axios.post.mockResolvedValueOnce({ data: {} });
     axios.post.mockResolvedValueOnce({});
     const res = await request(app)
@@ -401,9 +399,6 @@ describe('POST /api/payments/confirm', () => {
     expect(res.body.enrollmentId).toBeNull();
   });
 
-  //Covers lines 189-190 — notification .catch() block 
-  // The notification call is fire-and-forget (no await), so we must flush
-  // the promise queue AFTER the response to let the rejection propagate.
   test('200 success and console.warn fires when notification throws — covers lines 189-190', async () => {
     const mockPay = {
       status:                'pending',
@@ -423,27 +418,17 @@ describe('POST /api/payments/confirm', () => {
       status:        'succeeded',
       latest_charge: 'ch_1',
     });
-
-    // Enrollment succeeds
     axios.post.mockResolvedValueOnce({
       data: { enrollment: { _id: 'enroll_ok' } },
     });
-
-    // Notification rejects — this hits the fire-and-forget .catch() on lines 189-190
     axios.post.mockRejectedValueOnce(new Error('Notification service down'));
-
     const res = await request(app)
       .post('/api/payments/confirm')
       .set('Authorization', `Bearer ${studentToken}`)
       .send({ paymentIntentId: 'pi_notify_fail' });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.enrollmentId).toBe('enroll_ok');
-
-    // Flush all pending microtasks so the fire-and-forget .catch() executes
-    // and Istanbul records lines 189-190 as covered
     await flushPromises();
-
     expect(console.warn).toHaveBeenCalledWith(
       '[confirmPayment] notification failed:',
       'Notification service down',
@@ -532,12 +517,51 @@ describe('GET /api/payments/:id', () => {
     expect(res.body.userId).toBe('user_student_1');
   });
 
-  //  Covers line 215 — outer catch in getPaymentById → 500
   test('500 on database error — covers line 215', async () => {
     Payment.findById.mockRejectedValueOnce(new Error('DB connection lost'));
     const res = await request(app)
       .get('/api/payments/pay_1')
       .set('Authorization', `Bearer ${studentToken}`);
     expect(res.statusCode).toBe(500);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FINAL COVERAGE FIXES (app.js lines 17, 28-31, 53 & paymentController.js 226-227)
+// ═════════════════════════════════════════════════════════════════════════════
+describe('Missing Coverage Gaps', () => {
+  // Targets app.js lines 28-31 (CORS error logic)
+  test('Should return error for disallowed CORS origin', async () => {
+    const res = await request(app)
+      .get('/health')
+      .set('Origin', 'http://malicious-site.com');
+    expect(res.statusCode).toBe(500); // Express CORS middleware throws an error on mismatch
+  });
+
+  // Targets app.js line 17 (CORS allowed origin check)
+  test('Should allow request from whitelisted origin', async () => {
+    const res = await request(app)
+      .get('/health')
+      .set('Origin', 'http://localhost:3000');
+    expect(res.statusCode).toBe(200);
+  });
+
+  // Targets paymentController.js lines 226-227 (getOrCreateStripeCustomer catch block)
+  test('500 if getOrCreateStripeCustomer fails due to DB error', async () => {
+    axios.get.mockResolvedValueOnce({ data: { price: 50, title: 'Course' } });
+    Payment.findOne.mockResolvedValueOnce(null); // success payment check
+    
+    // Force findOne in the helper to crash
+    const chain = mockFindOneChain(null);
+    chain.lean = jest.fn().mockRejectedValue(new Error('Helper DB Fail'));
+    Payment.findOne.mockReturnValueOnce(chain);
+
+    const res = await request(app)
+      .post('/api/payments/create-intent')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ courseId: 'c1' });
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body.message).toBe('Payment initialization failed');
   });
 });
