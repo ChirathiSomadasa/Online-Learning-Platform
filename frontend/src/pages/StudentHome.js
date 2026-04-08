@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAllCourses } from '../services/courseService';
-import axios from 'axios';
-
+import { getUserEnrollments } from '../services/enrollmentService'; // Add this import
 
 // MUI Icons
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
@@ -14,12 +13,11 @@ import EventSeatIcon from '@mui/icons-material/EventSeat';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 
 const StudentHome = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth(); // Add token from useAuth
   const navigate = useNavigate();
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [enrollments, setEnrollments] = useState([]);
   const [userStats, setUserStats] = useState({
     enrolled: 0,
     completed: 0,
@@ -27,58 +25,60 @@ const StudentHome = () => {
   });
 
   useEffect(() => {
-    const fetchCourses = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const data = await getAllCourses();
+        // Fetch courses and enrollments in parallel
+        const [coursesData, enrollmentsData] = await Promise.all([
+          getAllCourses(),
+          user && user.id ? getUserEnrollments(user.id, token) : Promise.resolve([])
+        ]);
+        
         // Get only the first 6 courses to showcase on the home page
-        setCourses(data.slice(0, 6));
+        setCourses(coursesData.slice(0, 6));
+        
+        // Calculate stats from enrollments
+        if (enrollmentsData && enrollmentsData.length > 0) {
+          calculateStats(enrollmentsData);
+        }
       } catch (error) {
-        console.error("Failed to fetch courses:", error);
+        console.error("Failed to fetch data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCourses();
-  }, []);
+    fetchData();
+  }, [user, token]); // Add dependencies
 
-  const stats = [
-    { icon: <AutoStoriesIcon style={styles.statIcon} />, num: '3', lbl: 'Enrolled Courses', color: '#49BBBD' },
-    { icon: <CheckCircleOutlineIcon style={styles.statIcon} />, num: '1', lbl: 'Completed', color: '#2ecc71' },
-    { icon: <AccessTimeIcon style={styles.statIcon} />, num: '24h', lbl: 'Learning Time', color: '#f1c40f' },
-  ];
-  
-  useEffect(() => {
-    if (user && user.id) {
-      fetchUserData();
-    }
-  }, [user]);
-
-  const fetchUserData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`http://localhost:3003/api/enrollment/user/${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const data = res.data;
-      setEnrollments(data);
-      calculateStats(data);
-    } catch (error) {
-      console.error('Error fetching enrollments:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const calculateStats = (data) => {
-    const enrolled = data.length;
-    const completed = data.filter(e => e.progress === 100).length;
-    const hours = enrolled * 15;
+  const calculateStats = (enrollmentsData) => {
+    const enrolled = enrollmentsData.length;
+    const completed = enrollmentsData.filter(e => e.progress === 100).length;
+    const hours = enrolled * 15; // Assuming 15 hours per course on average
     setUserStats({ enrolled, completed, hours });
   };
 
+  // Dynamic stats based on actual enrollment data
+  const stats = [
+    { 
+      icon: <AutoStoriesIcon style={styles.statIcon} />, 
+      num: userStats.enrolled.toString(), 
+      lbl: 'Enrolled Courses', 
+      color: '#49BBBD' 
+    },
+    { 
+      icon: <CheckCircleOutlineIcon style={styles.statIcon} />, 
+      num: userStats.completed.toString(), 
+      lbl: 'Completed', 
+      color: '#2ecc71' 
+    },
+    { 
+      icon: <AccessTimeIcon style={styles.statIcon} />, 
+      num: `${userStats.hours}h`, 
+      lbl: 'Learning Time', 
+      color: '#f1c40f' 
+    },
+  ];
 
   return (
     <div style={styles.page}>
@@ -97,7 +97,7 @@ const StudentHome = () => {
             <p style={styles.bannerSubtitle}>
               Continue your learning journey today
             </p>
-            <button style={styles.primaryBtn} onClick={() => navigate('/my-courses')}>
+            <button style={styles.primaryBtn} onClick={() => navigate('/enrollments')}>
               View My Progress
             </button>
           </div>
@@ -128,7 +128,6 @@ const StudentHome = () => {
             <h2 style={styles.sectionTitle}>Explore New Horizons</h2>
             <p style={styles.sectionSubtitle}>Handpicked courses based on your interests</p>
           </div>
-          {/* Linked to /courses */}
           <button style={styles.textBtn} onClick={() => navigate('/courses')}>
             View All Courses
           </button>
@@ -139,7 +138,6 @@ const StudentHome = () => {
         ) : (
           <div style={styles.courseGrid}>
             {courses.map(course => {
-              // Calculate available seats
               const availableSeats = (course.totalSeats || 0) - (course.enrolledCount || 0);
 
               return (
@@ -169,7 +167,7 @@ const StudentHome = () => {
                     style={styles.enrollBtn}
                     onMouseOver={(e) => e.target.style.backgroundColor = '#008b8b'}
                     onMouseOut={(e) => e.target.style.backgroundColor = '#00b4b4'}
-                    onClick={() => navigate(`/enroll/${course._id}`)}
+                    onClick={() => navigate(`/courses`, { state: { selectedCourseId: course._id } })}
                   >
                     Enroll Now
                   </button>
