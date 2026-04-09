@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const ENROLLMENT_API = process.env.REACT_APP_ENROLLMENT_API_URL || 'http://localhost:3003';
+const ENROLLMENT_API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 /**
  * Helper to get auth headers

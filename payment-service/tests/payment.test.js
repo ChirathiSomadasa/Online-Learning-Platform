@@ -1,11 +1,12 @@
 const request = require('supertest');
-const app     = require('../src/app');
+const app = require('../src/app');
+const mongoose = require('mongoose');
 
 // 1. Mock Stripe 
 jest.mock('stripe', () => {
   const mockStripeInstance = {
     paymentIntents: {
-      create:   jest.fn(),
+      create: jest.fn(),
       retrieve: jest.fn(),
     },
     customers: {
@@ -16,45 +17,48 @@ jest.mock('stripe', () => {
 });
 
 // 2. Mock axios & Payment 
-jest.mock('axios');
+jest.mock('axios', () => ({
+  get: jest.fn(),
+  // Must return a resolvable promise to prevent fire-and-forget .catch() from throwing unhandled rejections
+  post: jest.fn().mockReturnValue(Promise.resolve({ data: {} })), 
+}));
 jest.mock('../src/models/Payment');
 
-const stripe  = require('stripe');
-const axios   = require('axios');
+const stripe = require('stripe');
+const axios = require('axios');
 const Payment = require('../src/models/Payment');
-const jwt     = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 
-// Helper: Stripe instance 
+// Helpers 
 const getStripe = () => stripe.mock.results[0]?.value ?? stripe();
 
-// Helper: Mongoose findOne chain mock 
 const mockFindOneChain = (result) => ({
-  sort:   jest.fn().mockReturnThis(),
+  sort: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
-  lean:   jest.fn().mockResolvedValue(result),
+  lean: jest.fn().mockResolvedValue(result),
 });
 
-// Helper: Mongoose find chain mock 
 const mockFindChain = (result) => ({
   sort: jest.fn().mockResolvedValue(result),
 });
 
-// Helper: flush all pending promises & microtasks 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 50));
 
 // ENV 
-process.env.JWT_SECRET               = 'test_jwt_secret';
-process.env.COURSE_SERVICE_URL       = 'http://course-service';
-process.env.ENROLLMENT_SERVICE_URL   = 'http://enroll-service';
+process.env.JWT_SECRET = 'test_jwt_secret';
+process.env.COURSE_SERVICE_URL = 'http://course-service';
+process.env.ENROLLMENT_SERVICE_URL = 'http://enroll-service';
 process.env.NOTIFICATION_SERVICE_URL = 'http://notify-service';
-process.env.STRIPE_SECRET_KEY        = 'sk_test';
+process.env.STRIPE_SECRET_KEY = 'sk_test';
+process.env.MONGO_URI = 'mongodb://localhost:27017/test';
+process.env.PORT = '3099';
 
 const studentToken = jwt.sign(
   { id: 'user_student_1', email: 'student@test.com', name: 'Test Student' },
   process.env.JWT_SECRET,
 );
 
-// ─── Reset mocks ─────────────────────────────────────────────────────────────
+// Setup & Teardown 
 beforeEach(() => {
   jest.clearAllMocks();
   jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -66,10 +70,134 @@ afterEach(() => {
   console.warn.mockRestore();
 });
 
-// ═════════════════════════════════════════════════════════════════════════════
-// authMiddleware — covers lines 15-16 (invalid token catch block)
-// ═════════════════════════════════════════════════════════════════════════════
+// Ensures open handles from stray timers/promises are flushed
+afterAll(async () => {
+  await mongoose.disconnect();
+  await flushPromises();
+});
+
+// =============================================================================
+// paymentController.js — Edge cases & Branch Fallbacks (Hits Line 88 variants)
+// =============================================================================
+describe('paymentController.js coverage extensions', () => {
+
+  test('handles null/undefined userName gracefully — covers sanitizeString line 20', async () => {
+    const tokenNoName = jwt.sign(
+      { id: 'user_no_name', email: 'noname@test.com' },
+      process.env.JWT_SECRET,
+    );
+
+    axios.get.mockResolvedValueOnce({ data: { price: 50, title: 'Course' } });
+    Payment.findOne
+      .mockResolvedValueOnce(null)
+      .mockReturnValueOnce(mockFindOneChain(null));
+    axios.get.mockRejectedValueOnce(new Error('down'));
+    getStripe().customers.create.mockResolvedValueOnce({ id: 'cus_1' });
+    getStripe().paymentIntents.create.mockResolvedValueOnce({
+      id: 'pi_1', client_secret: 'secret', currency: 'usd',
+    });
+    Payment.create.mockResolvedValueOnce({ _id: 'pay_1' });
+
+    const res = await request(app)
+      .post('/api/payments/create-intent')
+      .set('Authorization', `Bearer ${tokenNoName}`)
+      .send({ courseId: 'c1' });
+
+    expect(res.statusCode).toBe(201);
+  });
+
+  test('creates new stripe customer when existing customer is NOT found', async () => {
+    axios.get.mockResolvedValueOnce({ data: { price: 50, title: 'Course' } });
+    Payment.findOne.mockResolvedValueOnce(null);
+    axios.get.mockResolvedValueOnce({ data: [] });
+    
+    // Force existing to evaluate to null
+    Payment.findOne.mockReturnValueOnce(mockFindOneChain(null));
+
+    getStripe().customers.create.mockResolvedValueOnce({ id: 'cus_new_created' });
+    getStripe().paymentIntents.create.mockResolvedValueOnce({
+      id: 'pi_1', client_secret: 's', currency: 'usd',
+    });
+    Payment.create.mockResolvedValueOnce({ _id: 'p1' });
+
+    const res = await request(app)
+      .post('/api/payments/create-intent')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ courseId: 'c1' });
+
+    expect(res.statusCode).toBe(201);
+    expect(getStripe().customers.create).toHaveBeenCalled();
+  });
+
+  test('creates new customer when existing DB record lacks stripeCustomerId (branch cover)', async () => {
+    axios.get.mockResolvedValueOnce({ data: { price: 50, title: 'Course' } });
+    Payment.findOne.mockResolvedValueOnce(null);
+    axios.get.mockResolvedValueOnce({ data: [] });
+    
+    // Object exists but property missing -> existing?.stripeCustomerId evaluates false
+    Payment.findOne.mockReturnValueOnce(mockFindOneChain({ someOtherField: true })); 
+
+    getStripe().customers.create.mockResolvedValueOnce({ id: 'cus_new_2' });
+    getStripe().paymentIntents.create.mockResolvedValueOnce({ id: 'pi_1', client_secret: 's', currency: 'usd' });
+    Payment.create.mockResolvedValueOnce({ _id: 'p1' });
+
+    const res = await request(app)
+      .post('/api/payments/create-intent')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ courseId: 'c1' });
+
+    expect(res.statusCode).toBe(201);
+  });
+
+  test('proceeds to intent creation if existing enrollments do not match current course or active status (branch cover)', async () => {
+    axios.get.mockResolvedValueOnce({ data: { price: 50, title: 'Course' } });
+    Payment.findOne.mockResolvedValueOnce(null);
+    
+    // Array has items, but .some() check fails -> covers the internal condition of alreadyEnrolled
+    axios.get.mockResolvedValueOnce({
+      data: [
+        { courseId: 'c1', status: 'inactive' }, // Match course, wrong status
+        { courseId: 'other_course', status: 'active' }, // Wrong course, match status
+      ]
+    });
+    Payment.findOne.mockReturnValueOnce(mockFindOneChain(null));
+    getStripe().customers.create.mockResolvedValueOnce({ id: 'cus_1' });
+    getStripe().paymentIntents.create.mockResolvedValueOnce({ id: 'pi_1', client_secret: 's', currency: 'usd' });
+    Payment.create.mockResolvedValueOnce({ _id: 'p1' });
+
+    const res = await request(app)
+      .post('/api/payments/create-intent')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ courseId: 'c1' });
+
+    expect(res.statusCode).toBe(201);
+  });
+
+  test('proceeds if enrollment check returns undefined data (branch cover)', async () => {
+    axios.get.mockResolvedValueOnce({ data: { price: 50, title: 'Course' } });
+    Payment.findOne.mockResolvedValueOnce(null);
+    
+    // resp.data is undefined -> (resp.data || []) falls back to []
+    axios.get.mockResolvedValueOnce({}); 
+    Payment.findOne.mockReturnValueOnce(mockFindOneChain(null));
+    getStripe().customers.create.mockResolvedValueOnce({ id: 'cus_1' });
+    getStripe().paymentIntents.create.mockResolvedValueOnce({ id: 'pi_1', client_secret: 's', currency: 'usd' });
+    Payment.create.mockResolvedValueOnce({ _id: 'p1' });
+
+    const res = await request(app)
+      .post('/api/payments/create-intent')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ courseId: 'c1' });
+
+    expect(res.statusCode).toBe(201);
+  });
+});
+
+// =============================================================================
+// Auth Middleware Error Handling
+// =============================================================================
 describe('Auth Middleware Error Handling', () => {
+
   test('401 if token is invalid — covers authMiddleware lines 15-16', async () => {
     const res = await request(app)
       .get('/api/payments/my')
@@ -93,9 +221,9 @@ describe('Auth Middleware Error Handling', () => {
   });
 });
 
-// ═════════════════════════════════════════════════════════════════════════════
-// Payment model — covers line 43 (pre-save hook updatedAt)
-// ═════════════════════════════════════════════════════════════════════════════
+// =============================================================================
+// Payment Model Hooks
+// =============================================================================
 describe('Payment Model Hooks', () => {
   test('should update updatedAt field on save — covers Payment.js line 43', async () => {
     const PaymentModel = jest.requireActual('../src/models/Payment');
@@ -106,7 +234,6 @@ describe('Payment Model Hooks', () => {
       amount:    1000,
     });
 
-    // Manually trigger pre-save hooks
     await Promise.all(
       payment.constructor.schema.s.hooks._pres
         .get('save')
@@ -118,9 +245,10 @@ describe('Payment Model Hooks', () => {
   });
 });
 
-// ═════════════════════════════════════════════════════════════════════════════
-// GET /health
-// ═════════════════════════════════════════════════════════════════════════════
+// =============================================================================
+// API Routes
+// =============================================================================
+
 describe('GET /health', () => {
   test('returns 200', async () => {
     const res = await request(app).get('/health');
@@ -128,9 +256,6 @@ describe('GET /health', () => {
   });
 });
 
-// ═════════════════════════════════════════════════════════════════════════════
-// POST /api/payments/create-intent
-// ═════════════════════════════════════════════════════════════════════════════
 describe('POST /api/payments/create-intent', () => {
 
   test('401 if no token', async () => {
@@ -199,7 +324,7 @@ describe('POST /api/payments/create-intent', () => {
     expect(res.body.message).toContain('Already enrolled');
   });
 
-  test('201 success even if enrollment service check fails — covers line 66', async () => {
+  test('201 success even if enrollment service check fails', async () => {
     axios.get.mockResolvedValueOnce({ data: { price: 50, title: 'Course' } });
     Payment.findOne
       .mockResolvedValueOnce(null)
@@ -251,9 +376,6 @@ describe('POST /api/payments/create-intent', () => {
   });
 });
 
-// ═════════════════════════════════════════════════════════════════════════════
-// POST /api/payments/confirm
-// ═════════════════════════════════════════════════════════════════════════════
 describe('POST /api/payments/confirm', () => {
 
   test('401 if no token', async () => {
@@ -293,7 +415,7 @@ describe('POST /api/payments/confirm', () => {
     expect(res.body.message).toContain('already confirmed');
   });
 
-  test('400 if stripe payment failed', async () => {
+  test('400 if stripe payment failed with error details', async () => {
     const mockPay = {
       status: 'pending',
       save:   jest.fn().mockResolvedValue(true),
@@ -313,7 +435,46 @@ describe('POST /api/payments/confirm', () => {
     expect(mockPay.save).toHaveBeenCalled();
   });
 
-  test('200 success confirm with enrollment', async () => {
+  test('400 if stripe payment failed without error details — covers lines 181-182', async () => {
+    const mockPay = {
+      status: 'pending',
+      save:   jest.fn().mockResolvedValue(true),
+      userId: 'user_student_1',
+      stripePaymentIntentId: 'pi_1',
+    };
+    Payment.findOne.mockResolvedValueOnce(mockPay);
+    getStripe().paymentIntents.retrieve.mockResolvedValueOnce({
+      status: 'requires_action',
+    });
+    const res = await request(app)
+      .post('/api/payments/confirm')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ paymentIntentId: 'pi_1' });
+    expect(res.statusCode).toBe(400);
+    expect(mockPay.failureCode).toBe('unknown');
+  });
+
+  test('confirms payment fallback for missing error code and message (branch cover)', async () => {
+    const mockPay = {
+      status: 'pending',
+      save:   jest.fn().mockResolvedValue(true),
+      userId: 'user_student_1',
+      stripePaymentIntentId: 'pi_1',
+    };
+    Payment.findOne.mockResolvedValueOnce(mockPay);
+    getStripe().paymentIntents.retrieve.mockResolvedValueOnce({
+      status:             'requires_payment_method',
+      last_payment_error: {}, // empty object branch cover
+    });
+    const res = await request(app)
+      .post('/api/payments/confirm')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ paymentIntentId: 'pi_1' });
+    expect(res.statusCode).toBe(400);
+    expect(mockPay.failureCode).toBe('unknown');
+  });
+
+  test('200 success confirm with enrollment and charge id — covers line 188 true branch', async () => {
     const mockPay = {
       status:                'pending',
       save:                  jest.fn().mockResolvedValue(true),
@@ -333,13 +494,40 @@ describe('POST /api/payments/confirm', () => {
       latest_charge: 'ch_1',
     });
     axios.post.mockResolvedValueOnce({ data: { enrollment: { _id: 'enroll_1' } } });
-    axios.post.mockResolvedValueOnce({});
+    axios.post.mockResolvedValueOnce({}); // Notification mock
     const res = await request(app)
       .post('/api/payments/confirm')
       .set('Authorization', `Bearer ${studentToken}`)
       .send({ paymentIntentId: 'pi_1' });
     expect(res.statusCode).toBe(200);
     expect(mockPay.save).toHaveBeenCalledTimes(2);
+  });
+
+  test('200 success confirm without charge id — covers line 188 false branch', async () => {
+    const mockPay = {
+      status:                'pending',
+      save:                  jest.fn().mockResolvedValue(true),
+      userId:                'user_student_1',
+      stripePaymentIntentId: 'pi_1',
+      courseId:              'c1',
+      userEmail:             'test@test.com',
+      userName:              'Test',
+      courseTitle:           'Course',
+      amount:                5000,
+      currency:              'usd',
+      _id:                   'pay_1',
+    };
+    Payment.findOne.mockResolvedValueOnce(mockPay);
+    getStripe().paymentIntents.retrieve.mockResolvedValueOnce({
+      status: 'succeeded',
+    });
+    axios.post.mockResolvedValueOnce({ data: { enrollment: { _id: 'enroll_1' } } });
+    axios.post.mockResolvedValueOnce({});
+    const res = await request(app)
+      .post('/api/payments/confirm')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ paymentIntentId: 'pi_1' });
+    expect(res.statusCode).toBe(200);
   });
 
   test('200 success when enrollment creation fails', async () => {
@@ -370,8 +558,7 @@ describe('POST /api/payments/confirm', () => {
     expect(res.statusCode).toBe(200);
   });
 
-  // Covers line 181 — enrollment response has no _id → null fallback 
-  test('200 when enrollment response has no _id — covers line 181', async () => {
+  test('200 when enrollment response has no _id — covers line 201 null fallback', async () => {
     const mockPay = {
       status:                'pending',
       save:                  jest.fn().mockResolvedValue(true),
@@ -390,7 +577,6 @@ describe('POST /api/payments/confirm', () => {
       status:        'succeeded',
       latest_charge: 'ch_1',
     });
-    // Enrollment responds but with no enrollment._id — hits the || null branch
     axios.post.mockResolvedValueOnce({ data: {} });
     axios.post.mockResolvedValueOnce({});
     const res = await request(app)
@@ -401,10 +587,7 @@ describe('POST /api/payments/confirm', () => {
     expect(res.body.enrollmentId).toBeNull();
   });
 
-  //Covers lines 189-190 — notification .catch() block 
-  // The notification call is fire-and-forget (no await), so we must flush
-  // the promise queue AFTER the response to let the rejection propagate.
-  test('200 success and console.warn fires when notification throws — covers lines 189-190', async () => {
+  test('200 and console.warn fires when notification throws', async () => {
     const mockPay = {
       status:                'pending',
       save:                  jest.fn().mockResolvedValue(true),
@@ -423,13 +606,9 @@ describe('POST /api/payments/confirm', () => {
       status:        'succeeded',
       latest_charge: 'ch_1',
     });
-
-    // Enrollment succeeds
     axios.post.mockResolvedValueOnce({
       data: { enrollment: { _id: 'enroll_ok' } },
     });
-
-    // Notification rejects — this hits the fire-and-forget .catch() on lines 189-190
     axios.post.mockRejectedValueOnce(new Error('Notification service down'));
 
     const res = await request(app)
@@ -440,8 +619,6 @@ describe('POST /api/payments/confirm', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.enrollmentId).toBe('enroll_ok');
 
-    // Flush all pending microtasks so the fire-and-forget .catch() executes
-    // and Istanbul records lines 189-190 as covered
     await flushPromises();
 
     expect(console.warn).toHaveBeenCalledWith(
@@ -449,11 +626,18 @@ describe('POST /api/payments/confirm', () => {
       'Notification service down',
     );
   });
+
+  test('500 on database error during confirm — covers lines 226-227', async () => {
+    Payment.findOne.mockRejectedValueOnce(new Error('DB connection lost'));
+    const res = await request(app)
+      .post('/api/payments/confirm')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ paymentIntentId: 'pi_1' });
+    expect(res.statusCode).toBe(500);
+    expect(res.body.message).toContain('confirmation failed');
+  });
 });
 
-// ═════════════════════════════════════════════════════════════════════════════
-// GET /api/payments/my
-// ═════════════════════════════════════════════════════════════════════════════
 describe('GET /api/payments/my', () => {
 
   test('401 if no token', async () => {
@@ -464,12 +648,13 @@ describe('GET /api/payments/my', () => {
   test('200 returns user payments', async () => {
     Payment.find.mockReturnValueOnce(mockFindChain([
       { _id: 'pay_1', userId: 'user_student_1', status: 'succeeded' },
+      { _id: 'pay_2', userId: 'user_student_1', status: 'pending' },
     ]));
     const res = await request(app)
       .get('/api/payments/my')
       .set('Authorization', `Bearer ${studentToken}`);
     expect(res.statusCode).toBe(200);
-    expect(res.body).toHaveLength(1);
+    expect(res.body).toHaveLength(2);
   });
 
   test('200 returns empty array when no payments', async () => {
@@ -492,9 +677,6 @@ describe('GET /api/payments/my', () => {
   });
 });
 
-// ═════════════════════════════════════════════════════════════════════════════
-// GET /api/payments/:id
-// ═════════════════════════════════════════════════════════════════════════════
 describe('GET /api/payments/:id', () => {
 
   test('401 if no token', async () => {
@@ -532,12 +714,114 @@ describe('GET /api/payments/:id', () => {
     expect(res.body.userId).toBe('user_student_1');
   });
 
-  //  Covers line 215 — outer catch in getPaymentById → 500
   test('500 on database error — covers line 215', async () => {
     Payment.findById.mockRejectedValueOnce(new Error('DB connection lost'));
     const res = await request(app)
       .get('/api/payments/pay_1')
       .set('Authorization', `Bearer ${studentToken}`);
     expect(res.statusCode).toBe(500);
+  });
+});
+
+describe('src/app.js coverage', () => {
+  beforeEach(() => {
+    jest.resetModules();
+  });
+
+  test('warns when swagger.yaml is missing — covers line 53', () => {
+    const fs = require('node:fs');
+    const originalRead = fs.readFileSync;
+    
+    // Safely spy on fs without causing an infinite recursive loop
+    jest.spyOn(fs, 'readFileSync').mockImplementation((filePath, options) => {
+      if (String(filePath).includes('swagger.yaml')) {
+        throw new Error('ENOENT: no such file');
+      }
+      return originalRead(filePath, options);
+    });
+
+    require('../src/app');
+
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('swagger.yaml not found'));
+    fs.readFileSync.mockRestore();
+  });
+
+  test('uses ALLOWED_ORIGINS env variable when set — covers line 17', async () => {
+    process.env.ALLOWED_ORIGINS = 'http://myapp.com,http://localhost:3000';
+    const freshApp = require('../src/app');
+    
+    const res = await request(freshApp).get('/health').set('Origin', 'http://myapp.com');
+    expect(res.statusCode).toBe(200);
+    
+    delete process.env.ALLOWED_ORIGINS;
+  });
+
+  test('blocks request from disallowed CORS origin — covers line 31', async () => {
+    const freshApp = require('../src/app');
+    const res = await request(freshApp)
+      .get('/health')
+      .set('Origin', 'http://malicious-site.com');
+    expect([403, 500]).toContain(res.statusCode);
+  });
+
+  test('allows request with no origin — covers line 26', async () => {
+    const freshApp = require('../src/app');
+    const res = await request(freshApp).get('/health');
+    expect(res.statusCode).toBe(200);
+  });
+
+  test('allows request from whitelisted origin — covers lines 28-29', async () => {
+    const freshApp = require('../src/app');
+    const res = await request(freshApp)
+      .get('/health')
+      .set('Origin', 'http://localhost:3000');
+    expect(res.statusCode).toBe(200);
+  });
+});
+
+describe('src/index.js bootstrap', () => {
+  beforeEach(() => {
+    jest.resetModules();
+  });
+
+  test('connects to MongoDB and starts server', async () => {
+    const listenMock = jest.fn().mockImplementation((port, cb) => {
+      if (cb) cb();
+      return { close: jest.fn() };
+    });
+    
+    jest.doMock('../src/app', () => ({
+      listen: listenMock,
+      use: jest.fn(),
+      get: jest.fn(),
+    }));
+    
+    const mongooseMock = require('mongoose');
+    jest.spyOn(mongooseMock, 'connect').mockResolvedValueOnce({});
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    require('../src/index');
+    await flushPromises();
+
+    expect(mongooseMock.connect).toHaveBeenCalled();
+    expect(listenMock).toHaveBeenCalled();
+  });
+
+  test('calls process.exit(1) on MongoDB connection error', async () => {
+    jest.doMock('../src/app', () => ({
+      listen: jest.fn(),
+      use: jest.fn(),
+      get: jest.fn(),
+    }));
+    
+    const mongooseMock = require('mongoose');
+    jest.spyOn(mongooseMock, 'connect').mockRejectedValueOnce(new Error('Connection failed'));
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
+
+    require('../src/index');
+    await flushPromises();
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    exitSpy.mockRestore();
   });
 });

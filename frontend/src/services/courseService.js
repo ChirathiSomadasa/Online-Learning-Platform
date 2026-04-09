@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const COURSE_API = process.env.REACT_APP_COURSE_API_URL || 'http://localhost:3002';
+const COURSE_API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // ── Public ──────────────────────────────────────────────
 

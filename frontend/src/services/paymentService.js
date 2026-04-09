@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API = process.env.REACT_APP_PAYMENT_API_URL || 'http://localhost:3006';
+const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('token');
