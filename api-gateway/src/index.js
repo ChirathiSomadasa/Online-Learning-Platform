@@ -11,13 +11,33 @@ const AUTH_URL   = process.env.AUTH_SERVICE_URL         || 'http://localhost:300
 const COURSE_URL = process.env.COURSE_SERVICE_URL       || 'http://localhost:3002';
 const ENROLL_URL = process.env.ENROLLMENT_SERVICE_URL   || 'http://localhost:3003';
 const NOTIFY_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004';
+const PAYMENT_URL = process.env.PAYMENT_SERVICE_URL     || 'http://localhost:3006';
 
-app.use('/api/auth',          createProxyMiddleware({ target: AUTH_URL,   changeOrigin: true }));
-app.use('/api/users',         createProxyMiddleware({ target: AUTH_URL,   changeOrigin: true }));
-app.use('/api/courses',       createProxyMiddleware({ target: COURSE_URL, changeOrigin: true }));
-app.use('/api/enrollments',   createProxyMiddleware({ target: ENROLL_URL, changeOrigin: true }));
-app.use('/api/notifications', createProxyMiddleware({ target: NOTIFY_URL, changeOrigin: true }));
+app.use('/api/auth', createProxyMiddleware({ 
+  target: AUTH_URL, 
+  changeOrigin: true,
+  pathRewrite: (path) => '/api/auth' + path,  
+}));
+app.use('/api/courses', createProxyMiddleware({ 
+  target: COURSE_URL, changeOrigin: true,
+  pathRewrite: (path) => '/api/courses' + path
+}));
 
-app.get('/health', (req, res) => res.json({ status: 'API Gateway OK', port: 3005 }));
+app.use('/api/enrollment', createProxyMiddleware({ 
+  target: ENROLL_URL, changeOrigin: true,
+  pathRewrite: (path) => '/api/enrollment' + path
+}));
 
-app.listen(3005, () => console.log('API Gateway running on port 3005'));
+app.use('/api/notifications', createProxyMiddleware({ 
+  target: NOTIFY_URL, changeOrigin: true,
+  pathRewrite: (path) => '/api/notifications' + path
+}));
+
+app.use('/api/payments', createProxyMiddleware({ 
+  target: PAYMENT_URL, changeOrigin: true,
+  pathRewrite: (path) => '/api/payments' + path
+}));
+
+app.get('/health', (req, res) => res.json({ status: 'API Gateway OK', port: 5000 }));
+
+app.listen(5000, () => console.log('API Gateway running on port 5000'));
