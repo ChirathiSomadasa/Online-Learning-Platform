@@ -1,5 +1,6 @@
 const Enrollment = require('../models/Enrollment');
 const axios = require('axios');
+const mongoose = require('mongoose'); 
 
 const AUTH_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:3001';
 const COURSE_URL = process.env.COURSE_SERVICE_URL || 'http://localhost:3002';
@@ -10,6 +11,11 @@ exports.createEnrollment = async (req, res) => {
   try {
     const { courseId } = req.body;
     const token = req.headers.authorization?.split(' ')[1];
+
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ message: 'Invalid course ID format' });
+    }
+
     if (!token) return res.status(401).json({ message: 'No token provided' });
 
     // Validate user via Auth Service
@@ -19,7 +25,7 @@ exports.createEnrollment = async (req, res) => {
     if (!authRes.data.valid) return res.status(401).json({ message: 'Unauthorized' });
     const user = authRes.data.user;
 
-    // Get course details
+    // Get course details - validated courseId
     const courseRes = await axios.get(`${COURSE_URL}/api/courses/${courseId}`);
     const course = courseRes.data;
     if (course.enrolledCount >= course.totalSeats)
@@ -59,42 +65,62 @@ exports.createEnrollment = async (req, res) => {
   }
 };
 
-//get user enrollments
+// get user enrollments
 exports.getUserEnrollments = async (req, res) => {
   try {
-    const enrollments = await Enrollment.find({ userId: req.params.userId });
+    const sanitizedUserId = String(req.params.userId);
+    
+    const enrollments = await Enrollment.find({ userId: sanitizedUserId });
     res.json(enrollments);
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-//get enrollments by ID
+// get enrollments by ID
 exports.getEnrollmentById = async (req, res) => {
   try {
+    // ID validation
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid enrollment ID format' });
+    }
+
     const enrollment = await Enrollment.findById(req.params.id);
     if (!enrollment) return res.status(404).json({ message: 'Not found' });
     res.json(enrollment);
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-//cancel enrollments
+// cancel enrollments
 exports.cancelEnrollment = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid enrollment ID format' });
+    }
+
     const enrollment = await Enrollment.findByIdAndUpdate(
       req.params.id, { status: 'cancelled' }, { returnDocument: 'after' });
+      
     if (!enrollment) return res.status(404).json({ message: 'Not found' });
+
     try {
       await axios.put(`${COURSE_URL}/api/courses/${enrollment.courseId}/seats`,
         { action: 'decrement' });
     } catch (e) { console.warn('Seat update failed:', e.message); }
+
     res.json({ message: 'Enrollment cancelled', enrollment });
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-//update progress
+// update progress
 exports.updateProgress = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid enrollment ID format' });
+    }
+
     const enrollment = await Enrollment.findByIdAndUpdate(
       req.params.id, { progress: req.body.progress }, { new: true });
+    
+    if (!enrollment) return res.status(404).json({ message: 'Not found' });
     res.json(enrollment);
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
