@@ -50,7 +50,8 @@ exports.createEnrollment = async (req, res) => {
       userName: user.name,
       courseTitle: course.title,
       instructor: course.instructor,
-      enrollmentId: enrollment._id
+      enrollmentId: enrollment._id,
+      message: `Your enrollment for ${course.title} confirmed. Instructor: ${course.instructor}.`,
     }).catch(e => console.warn('Notification failed:', e.message));
 
     res.status(201).json({ message: 'Enrolled successfully', enrollment });
