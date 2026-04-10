@@ -4,8 +4,8 @@ const cors = require('cors');
 const courseRoutes = require('./routes/courseRoutes');
 const swaggerUi = require('swagger-ui-express');
 const yaml = require('js-yaml');
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const app = express();
 
