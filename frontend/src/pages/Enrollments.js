@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate, useLocation } from 'react-router-dom';
 
-// Toast
+import { getUserEnrollments, updateProgress, cancelEnrollment } from '../services/enrollmentService';
+
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// Icons
 import PersonIcon from "@mui/icons-material/Person";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CancelIcon from "@mui/icons-material/Cancel";
@@ -21,1614 +20,855 @@ import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import bannerLearning from '../images/enrollment/girl.png';
+import PlayCircleIcon from '@mui/icons-material/PlayCircle';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
+/* ─────────────────────────────────────────
+   CSS – light defaults, .dark overrides
+───────────────────────────────────────── */
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --bg:       #f0f4ff;
+    --surface:  #ffffff;
+    --surface2: #f8faff;
+    --border:   #e4eaf5;
+    --accent:   #00b4b4;
+    --text:     #0f172a;
+    --muted:    #64748b;
+    --shadow:   rgba(0,180,180,0.08);
+  }
+
+  .dark {
+    --bg:       #0b0f1c;
+    --surface:  #131929;
+    --surface2: #1a2236;
+    --border:   rgba(255,255,255,0.08);
+    --accent:   #00d4d4;
+    --text:     #e8edf8;
+    --muted:    #6b7a99;
+    --shadow:   rgba(0,0,0,0.4);
+  }
+
+  @keyframes spin    { to { transform: rotate(360deg); } }
+  @keyframes fadeUp  { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes modalIn { from { opacity:0; transform:scale(0.96) translateY(-8px); } to { opacity:1; transform:scale(1) translateY(0); } }
+  @keyframes shimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+  @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  .enroll-card {
+    animation: fadeUp 0.38s ease both;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .enroll-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 52px var(--shadow) !important;
+    border-color: var(--accent) !important;
+  }
+  .search-inp:focus { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(0,180,180,0.15) !important; outline: none; }
+  .chip-btn  { transition: all 0.18s ease; }
+  .chip-btn:hover { transform: translateY(-1px); }
+  .action-btn { transition: all 0.2s ease; }
+  .action-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .toggle-btn { transition: all 0.18s ease; }
+  .theme-btn { transition: transform 0.25s ease; }
+  .theme-btn:hover { transform: rotate(20deg) scale(1.1); }
+  .stat-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.06);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-3px); }
+  .stat-card:hover::after { opacity: 1; }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--border) 25%, var(--surface2) 50%, var(--border) 75%);
+    background-size: 600px 100%;
+    animation: shimmer 1.4s infinite linear;
+    border-radius: 8px;
+  }
+
+  input[type=range] { cursor: pointer; accent-color: var(--accent); }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 2px 8px rgba(0,180,180,0.4);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 20px; height: 20px; border-radius: 50%; background: var(--accent); border: none;
+  }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  select option { background: var(--surface); color: var(--text); }
+
+  .modal-scroll { overflow-y: auto; }
+  .modal-scroll::-webkit-scrollbar { width: 4px; }
+  .modal-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .progress-track {
+    height: 6px; background: var(--border); border-radius: 4px; overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%; border-radius: 4px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .confirm-overlay {
+    animation: fadeUp 0.2s ease;
+  }
+`;
+document.head.appendChild(styleSheet);
+
+/* ─────────────────────────────────────────
+   Helpers
+───────────────────────────────────────── */
+const getDisplayStatus = (status, progress) => {
+    if (progress === 100) return 'completed';
+    const s = status?.toLowerCase() || '';
+    if (s === 'cancelled' || s === 'canceled') return 'cancelled';
+    if (s === 'active' || s === 'in-progress' || s === 'in progress') return 'active';
+    if (s === 'completed' || s === 'complete') return 'completed';
+    return s;
+};
+
+const statusMeta = (status, progress, dark) => {
+    const d = getDisplayStatus(status, progress);
+    const m = {
+        completed: {
+            color: dark ? '#22c98a' : '#0d9f6e',
+            bg: dark ? 'rgba(34,201,138,0.12)' : '#edfaf4',
+            bdr: dark ? 'rgba(34,201,138,0.2)' : '#c3ead8',
+            label: 'Completed', icon: <EmojiEventsIcon style={{ fontSize: 12 }} />,
+        },
+        cancelled: {
+            color: dark ? '#f06b6b' : '#c53030',
+            bg: dark ? 'rgba(240,107,107,0.12)' : '#fff1f1',
+            bdr: dark ? 'rgba(240,107,107,0.2)' : '#fecaca',
+            label: 'Cancelled', icon: <CancelIcon style={{ fontSize: 12 }} />,
+        },
+        active: {
+            color: dark ? '#00d4d4' : '#007f7f',
+            bg: dark ? 'rgba(0,212,212,0.12)' : '#e6fafa',
+            bdr: dark ? 'rgba(0,212,212,0.2)' : '#a7f0f0',
+            label: 'Active', icon: <PlayCircleIcon style={{ fontSize: 12 }} />,
+        },
+    };
+    return m[d] || { color: '#64748b', bg: '#f1f5f9', bdr: '#e2e8f0', label: d || 'Unknown', icon: null };
+};
+
+const progressColor = (p) => {
+    if (p === 100) return '#0d9f6e';
+    if (p >= 75)  return '#007f7f';
+    if (p >= 50)  return '#5a3fc0';
+    if (p >= 25)  return '#c47a0a';
+    return '#b91c1c';
+};
+
+const sortEnrollments = (list, type) => {
+    const active    = list.filter(e => e.status !== 'cancelled');
+    const cancelled = list.filter(e => e.status === 'cancelled');
+    const byDate    = (a, b) => new Date(b.enrolledAt) - new Date(a.enrolledAt);
+    if (type === 'recent')   { active.sort(byDate); cancelled.sort(byDate); }
+    if (type === 'progress') { active.sort((a, b) => b.progress - a.progress); cancelled.sort(byDate); }
+    if (type === 'title')    { const t = (a, b) => a.courseTitle.localeCompare(b.courseTitle); active.sort(t); cancelled.sort(t); }
+    return [...active, ...cancelled];
+};
+
+/* ─────────────────────────────────────────
+   Skeleton card (loading state)
+───────────────────────────────────────── */
+const SkeletonCard = ({ T }) => (
+    <div style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: 20, padding: '22px 22px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="skeleton" style={{ width: 80, height: 24 }} />
+            <div className="skeleton" style={{ width: 56, height: 56, borderRadius: '50%' }} />
+        </div>
+        <div className="skeleton" style={{ width: '75%', height: 18 }} />
+        <div className="skeleton" style={{ width: '50%', height: 14 }} />
+        <div className="skeleton" style={{ width: '100%', height: 5, borderRadius: 4 }} />
+    </div>
+);
+
+/* ─────────────────────────────────────────
+   CircleProgress
+───────────────────────────────────────── */
+const CircleProgress = ({ value, size = 60, dark }) => {
+    const r = 14, c = 2 * Math.PI * r, offset = c - (value / 100) * c, col = progressColor(value);
+    return (
+        <svg width={size} height={size} viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r={r} fill="none"
+                stroke={dark ? 'rgba(255,255,255,0.07)' : '#e8edf5'} strokeWidth="3" />
+            <circle cx="18" cy="18" r={r} fill="none" stroke={col} strokeWidth="3"
+                strokeDasharray={`${c} ${c}`} strokeDashoffset={offset}
+                strokeLinecap="round" transform="rotate(-90 18 18)"
+                style={{ transition: 'stroke-dashoffset 0.55s cubic-bezier(0.4,0,0.2,1)' }} />
+            <text x="18" y="22" textAnchor="middle" fontSize="6.5"
+                fill={col} fontFamily="'DM Mono',monospace" fontWeight="500">{value}%</text>
+        </svg>
+    );
+};
+
+/* ─────────────────────────────────────────
+   Inline Confirm Dialog
+───────────────────────────────────────── */
+const ConfirmDialog = ({ title, message, onConfirm, onDismiss, T, F, loading }) => (
+    <div className="confirm-overlay" style={{
+        background: T.surface2, border: `1.5px solid ${T.border}`,
+        borderRadius: 16, padding: '20px 22px', marginTop: 16,
+    }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(185,28,28,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <WarningAmberIcon style={{ fontSize: 18, color: '#b91c1c' }} />
+            </div>
+            <div>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: T.text }}>{title}</p>
+                <p style={{ margin: '5px 0 0', fontSize: 12, color: T.muted, lineHeight: 1.55 }}>{message}</p>
+            </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button onClick={onDismiss} style={{
+                padding: '8px 18px', borderRadius: 10, background: 'transparent',
+                color: T.muted, border: `1px solid ${T.border}`,
+                fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+            }}>Keep Enrolled</button>
+            <button onClick={onConfirm} disabled={loading} style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 10,
+                background: 'rgba(185,28,28,0.1)', color: '#b91c1c',
+                border: '1px solid rgba(185,28,28,0.2)',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+                opacity: loading ? 0.7 : 1,
+            }}>
+                {loading
+                    ? <div style={{ width: 12, height: 12, border: '2px solid rgba(185,28,28,0.3)', borderTop: '2px solid #b91c1c', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                    : <CancelIcon style={{ fontSize: 14 }} />}
+                {loading ? 'Cancelling…' : 'Yes, Cancel'}
+            </button>
+        </div>
+    </div>
+);
+
+/* ─────────────────────────────────────────
+   Main Component
+───────────────────────────────────────── */
 const Enrollments = () => {
+    const [dark, setDark] = useState(false);
     const [enrollments, setEnrollments] = useState([]);
-    const [filteredEnrollments, setFilteredEnrollments] = useState([]);
+    const [filteredEnrollments, setFiltered] = useState([]);
     const [viewMode, setViewMode] = useState("grid");
     const [loading, setLoading] = useState(true);
-    const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+    const [selectedEnrollment, setSelected] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
-    const [updatingProgress, setUpdatingProgress] = useState(false);
-    const [editingProgress, setEditingProgress] = useState(false);
+    const [updatingProgress, setUpdating] = useState(false);
+    const [cancellingEnrollment, setCancelling] = useState(false);
+    const [editingProgress, setEditing] = useState(false);
     const [newProgress, setNewProgress] = useState(0);
-
-    // Search and filter states
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [sortBy, setSortBy] = useState('recent');
+    const [searchTerm, setSearch] = useState('');
+    const [statusFilter, setStatus] = useState('all');
+    const [sortBy, setSort] = useState('recent');
     const [showFilters, setShowFilters] = useState(false);
-
-    const [stats, setStats] = useState({
-        total: 0,
-        completed: 0,
-        inProgress: 0,
-        averageProgress: 0
-    });
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+    const [stats, setStats] = useState({ total: 0, completed: 0, inProgress: 0, averageProgress: 0 });
 
     const user = JSON.parse(localStorage.getItem("user"));
     const navigate = useNavigate();
     const location = useLocation();
+    const F = "'Plus Jakarta Sans', sans-serif";
 
-    const sortEnrollments = (enrollments, sortType) => {
-        const activeEnrollments = enrollments.filter(e => e.status !== 'cancelled');
-        const cancelledEnrollments = enrollments.filter(e => e.status === 'cancelled');
-
-        // Sort active enrollments based on selected sort option
-        switch (sortType) {
-            case 'recent':
-                activeEnrollments.sort((a, b) => new Date(b.enrolledAt) - new Date(a.enrolledAt));
-                cancelledEnrollments.sort((a, b) => new Date(b.enrolledAt) - new Date(a.enrolledAt));
-                break;
-            case 'progress':
-                activeEnrollments.sort((a, b) => b.progress - a.progress);
-                cancelledEnrollments.sort((a, b) => new Date(b.enrolledAt) - new Date(a.enrolledAt));
-                break;
-            case 'title':
-                activeEnrollments.sort((a, b) => a.courseTitle.localeCompare(b.courseTitle));
-                cancelledEnrollments.sort((a, b) => a.courseTitle.localeCompare(b.courseTitle));
-                break;
-            default:
-                break;
-        }
-
-        // Return active enrollments first, then cancelled
-        return [...activeEnrollments, ...cancelledEnrollments];
+    const T = {
+        bg:      dark ? '#0b0f1c' : '#f0f4ff',
+        surface: dark ? '#131929' : '#ffffff',
+        surface2:dark ? '#1a2236' : '#f8faff',
+        border:  dark ? 'rgba(255,255,255,0.08)' : '#e4eaf5',
+        accent:  dark ? '#00d4d4' : '#00b4b4',
+        text:    dark ? '#e8edf8' : '#0f172a',
+        text2:   dark ? '#b0bcd4' : '#334155',
+        muted:   dark ? '#6b7a99' : '#64748b',
+        shadow:  dark ? 'rgba(0,0,0,0.4)' : 'rgba(0,180,180,0.08)',
+        hdr:     dark ? 'linear-gradient(135deg, #007f7f 0%, #009e9e 100%)' : 'linear-gradient(135deg, #009090 0%, #00b4b4 100%)',
     };
+
+    useEffect(() => {
+        let f = [...enrollments];
+        if (searchTerm) f = f.filter(e =>
+            e.courseTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            e.instructor.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        if (statusFilter !== 'all') f = f.filter(e => {
+            const s = e.status?.toLowerCase() || '';
+            if (statusFilter === 'active')    return s === 'active' || s === 'in-progress' || s === 'in progress';
+            if (statusFilter === 'completed') return s === 'completed' || s === 'complete' || e.progress === 100;
+            if (statusFilter === 'cancelled') return s === 'cancelled' || s === 'canceled';
+            return true;
+        });
+        setFiltered(sortEnrollments(f, sortBy));
+    }, [enrollments, searchTerm, statusFilter, sortBy]);
 
     useEffect(() => {
         fetchEnrollments();
         if (location.state?.enrollmentSuccess) {
-            toast.success(location.state.message || "Successfully enrolled in course!");
+            toast.success(location.state.message || "Successfully enrolled!");
             navigate(location.pathname, { replace: true, state: {} });
         }
     }, []);
 
-    // Filter and sort enrollments
-    useEffect(() => {
-        let filtered = [...enrollments];
-
-        // Search filter
-        if (searchTerm) {
-            filtered = filtered.filter(e =>
-                e.courseTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                e.instructor.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
-
-        // Status filter
-        if (statusFilter !== 'all') {
-            filtered = filtered.filter(e => {
-                const status = e.status?.toLowerCase() || '';
-
-                switch (statusFilter) {
-                    case 'active':
-                        return status === 'active' || status === 'in-progress' || status === 'in progress';
-                    case 'completed':
-                        // Check for completed based on progress or status
-                        return status === 'completed' || status === 'complete' || e.progress === 100;
-                    case 'cancelled':
-                        return status === 'cancelled' || status === 'canceled';
-                    default:
-                        return true;
-                }
-            });
-        }
-
-        // Apply sorting with cancelled courses at bottom
-        filtered = sortEnrollments(filtered, sortBy);
-
-        setFilteredEnrollments(filtered);
-
-    }, [enrollments, searchTerm, statusFilter, sortBy]);
-
     const fetchEnrollments = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(
-                `http://localhost:3003/api/enrollment/user/${user.id}`
-            );
-            setEnrollments(res.data);
-            setFilteredEnrollments(res.data);
-            calculateStats(res.data);
+            const token = localStorage.getItem('token');
+            const data = await getUserEnrollments(user.id, token);
+            setEnrollments(data); setFiltered(data); calcStats(data);
         } catch (err) {
-            toast.error("Failed to load enrollments");
-        } finally {
-            setLoading(false);
-        }
+            toast.error(err.response?.data?.message || "Failed to load enrollments");
+        } finally { setLoading(false); }
     };
 
-    const calculateStats = (enrollmentsData) => {
-        const total = enrollmentsData.length;
-        const completed = enrollmentsData.filter(e => e.progress === 100 ||
-            e.status?.toLowerCase() === 'completed' ||
-            e.status?.toLowerCase() === 'complete').length;
-        const inProgress = enrollmentsData.filter(e => e.progress > 0 && e.progress < 100 &&
-            e.status?.toLowerCase() !== 'cancelled' &&
-            e.status?.toLowerCase() !== 'completed').length;
-        const totalProgress = enrollmentsData.reduce((sum, e) => sum + (e.progress || 0), 0);
-        const averageProgress = total > 0 ? Math.round(totalProgress / total) : 0;
-
-        setStats({
-            total,
-            completed,
-            inProgress,
-            averageProgress
-        });
+    const calcStats = (data) => {
+        const total      = data.length;
+        const completed  = data.filter(e => e.progress === 100 || ['completed','complete'].includes(e.status?.toLowerCase())).length;
+        const inProgress = data.filter(e => e.progress > 0 && e.progress < 100 && !['cancelled','completed'].includes(e.status?.toLowerCase())).length;
+        const avg        = total > 0 ? Math.round(data.reduce((s, e) => s + (e.progress || 0), 0) / total) : 0;
+        setStats({ total, completed, inProgress, averageProgress: avg });
     };
 
-    const openEnrollmentDetail = (enrollment) => {
-        setSelectedEnrollment(enrollment);
-        setNewProgress(enrollment.progress || 0);
-        setEditingProgress(false);
+    const openDetail = (enroll) => {
+        setSelected(enroll);
+        setNewProgress(enroll.progress || 0);
+        setEditing(false);
+        setShowCancelConfirm(false);
         setModalOpen(true);
     };
+    const closeModal = () => { setModalOpen(false); setSelected(null); setEditing(false); setShowCancelConfirm(false); };
 
-    const closeModal = () => {
-        setModalOpen(false);
-        setSelectedEnrollment(null);
-        setEditingProgress(false);
-    };
-
-    const updateProgress = async () => {
+    const handleUpdateProgress = async () => {
         if (!selectedEnrollment) return;
-
-        if (newProgress < selectedEnrollment.progress) {
-            toast.warning("Learning is forward only! ");
-            return;
-        }
-
-        setUpdatingProgress(true);
+        if (newProgress < selectedEnrollment.progress) { toast.warning("Progress can only move forward."); return; }
+        setUpdating(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.put(
-                `http://localhost:3003/api/enrollment/${selectedEnrollment._id}/progress`,
-                { progress: newProgress },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-
-            if (response.data) {
-                toast.success('Progress updated successfully!');
-                setSelectedEnrollment({ ...selectedEnrollment, progress: newProgress });
-                setEditingProgress(false);
-
-                // Update the enrollment in the list
-                const updatedEnrollments = enrollments.map(e =>
-                    e._id === selectedEnrollment._id ? { ...e, progress: newProgress } : e
-                );
-                setEnrollments(updatedEnrollments);
-                calculateStats(updatedEnrollments);
-            }
-        } catch (error) {
-            console.error('Progress update error:', error);
-            toast.error(error.response?.data?.message || 'Failed to update progress');
-        } finally {
-            setUpdatingProgress(false);
-        }
+            await updateProgress(selectedEnrollment._id, newProgress, token);
+            toast.success('Progress updated!');
+            setSelected({ ...selectedEnrollment, progress: newProgress });
+            setEditing(false);
+            const updated = enrollments.map(e => e._id === selectedEnrollment._id ? { ...e, progress: newProgress } : e);
+            setEnrollments(updated);
+            calcStats(updated);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to update progress');
+        } finally { setUpdating(false); }
     };
 
-    const cancelEnrollment = (id, title, progress) => {
-        //prevent cancellation if progress >= 50
-        if (progress >= 50) {
-            toast.warning("Cannot cancel enrollment - You've already completed 50% or more of the course!");
-            return;
-        }
-
-        toast(
-            ({ closeToast }) => (
-                <div>
-                    <p style={{ marginBottom: "10px" }}>
-                        Cancel enrollment for <b>{title}</b> ?
-                    </p>
-                    <div style={{ display: "flex", gap: "10px" }}>
-                        <button
-                            style={styles.confirmBtn}
-                            onClick={async () => {
-                                try {
-                                    const token = localStorage.getItem('token');
-                                    await axios.delete(
-                                        `http://localhost:3003/api/enrollment/${id}`,
-                                        {
-                                            headers: {
-                                                'Authorization': `Bearer ${token}`
-                                            }
-                                        }
-                                    );
-                                    toast.success(`${title} enrollment cancelled`);
-                                    fetchEnrollments();
-                                    closeToast();
-                                } catch (err) {
-                                    toast.error("Failed to cancel enrollment");
-                                }
-                            }}
-                        >
-                            Yes
-                        </button>
-                        <button style={styles.cancelConfirmBtn} onClick={closeToast}>
-                            No
-                        </button>
-                    </div>
-                </div>
-            ),
-            { autoClose: false }
-        );
+    const handleCancelConfirmed = async () => {
+        if (!selectedEnrollment) return;
+        setCancelling(true);
+        try {
+            const token = localStorage.getItem('token');
+            await cancelEnrollment(selectedEnrollment._id, token);
+            toast.success('Enrollment cancelled successfully');
+            closeModal();
+            fetchEnrollments();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to cancel enrollment');
+        } finally { setCancelling(false); }
     };
 
-    const getDisplayStatus = (status, progress) => {
-        // If progress is 100%, always show as completed
-        if (progress === 100) {
-            return 'completed';
-        }
-
-        // Otherwise use the actual status
-        const statusLower = status?.toLowerCase() || '';
-
-        if (statusLower === 'cancelled' || statusLower === 'canceled') {
-            return 'cancelled';
-        }
-
-        if (statusLower === 'active' || statusLower === 'in-progress' || statusLower === 'in progress') {
-            return 'active';
-        }
-
-        if (statusLower === 'completed' || statusLower === 'complete') {
-            return 'completed';
-        }
-
-        return statusLower;
-    };
-
-    // Function to get color based on display status
-    const getStatusColor = (status, progress) => {
-        const displayStatus = getDisplayStatus(status, progress);
-
-        switch (displayStatus) {
-            case 'completed':
-                return '#2e7d32'; // Green for completed
-            case 'cancelled':
-                return '#e74c3c'; // Red for cancelled
-            case 'active':
-                return '#00b4b4'; // Teal for active
-            default:
-                return '#888'; // Grey for unknown
-        }
-    };
-
-    const getStatusIcon = (status, progress) => {
-        const statusLower = status?.toLowerCase() || '';
-
-        // First check if progress is 100% 
-        if (progress === 100) {
-            return <EmojiEventsIcon style={{ fontSize: 16 }} />;
-        }
-
-        // Then check status
-        if (statusLower === 'completed' || statusLower === 'complete') {
-            return <EmojiEventsIcon style={{ fontSize: 16 }} />;
-        }
-        if (statusLower === 'cancelled' || statusLower === 'canceled') {
-            return <CancelIcon style={{ fontSize: 16 }} />;
-        }
-        if (statusLower === 'active' || statusLower === 'in-progress' || statusLower === 'in progress') {
-            return <AccessTimeIcon style={{ fontSize: 16 }} />;
-        }
-
-        return null;
-    };
-
-    const getProgressColor = (progress) => {
-        if (progress === 100) return '#2e7d32';
-        if (progress >= 75) return '#00b4b4';
-        if (progress >= 50) return '#f39c12';
-        if (progress >= 25) return '#f1c40f';
-        return '#e74c3c';
-    };
+    const statCards = [
+        //{ label: 'Total Courses',  value: stats.total,              icon: <SchoolIcon style={{ fontSize: 20 }} />,       color: '#007f7f', lightBg: 'rgba(255,255,255,0.18)', darkBg: 'rgba(0,212,212,0.15)' },
+        //{ label: 'Completed',      value: stats.completed,          icon: <CheckCircleIcon style={{ fontSize: 20 }} />,   color: '#15a870', lightBg: 'rgba(255,255,255,0.18)', darkBg: 'rgba(34,201,138,0.15)' },
+        { label: 'In Progress',    value: stats.inProgress,         icon: <PlayCircleIcon style={{ fontSize: 20 }} />,    color: '#c47a0a', lightBg: 'rgba(255,255,255,0.18)', darkBg: 'rgba(196,122,10,0.15)' },
+        { label: 'Avg. Progress',  value: `${stats.averageProgress}%`, icon: <TrendingUpIcon style={{ fontSize: 20 }} />, color: '#5a3fc0', lightBg: 'rgba(255,255,255,0.18)', darkBg: 'rgba(90,63,192,0.15)' },
+    ];
 
     return (
-        <div style={styles.page}>
-            <ToastContainer position="top-center" autoClose={3000} />
+        <div className={dark ? 'dark' : ''}
+            style={{ fontFamily: F, background: T.bg, minHeight: '150vh', color: T.text, transition: 'background 0.3s, color 0.3s' }}>
+            <ToastContainer position="top-right" autoClose={3000} theme={dark ? 'dark' : 'light'} />
 
-            {/* Hero Section with Blob Effects */}
-            <section style={styles.hero}>
-                <div style={styles.blob1} />
-                <div style={styles.blob2} />
-                <div style={styles.heroInner}>
-                    <div style={styles.heroLeft}>
-                        <span style={styles.heroEyebrow}>
-                            My Enrollments
-                        </span>
-                        <h1 style={{ ...styles.heroTitle, fontFamily: "'Jakarta-Sans', sans-serif" }}>
-                            Track Your Progress<br />& Achieve Your Goals
-                        </h1>
-                        <p style={styles.heroSub}>
-                            Monitor your course progress, update completion status,
-                            and manage all your enrollments in one place.
-                        </p>
-                        <div style={styles.heroBtns}>
-                            <button className="hero-btn-primary" style={styles.heroBtnPrimary}
-                                onClick={() => document.getElementById('enrollments-section').scrollIntoView({ behavior: 'smooth' })}>
-                                View My Courses
-                            </button>
-                            <button className="hero-btn-secondary" style={styles.heroBtnSecondary}
-                                onClick={() => navigate('/courses')}>
-                                Explore More Courses
-                            </button>
+            {/* ══ HEADER ══ */}
+            <header style={{ background: T.hdr, padding: '0 48px', transition: 'background 0.3s' }}>
+                <div style={{ maxWidth: 1380, margin: '0 auto', padding: '28px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+                    {/* Brand */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div style={{ width: 50, height: 50, borderRadius: 14, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <SchoolIcon style={{ fontSize: 26, color: '#fff' }} />
                         </div>
-                        <div style={styles.blob3} />
+                        <div>
+                            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.2 }}>My Enrollments</h1>
+                            <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.72)', fontWeight: 400 }}>Track and manage your learning journey</p>
+                        </div>
                     </div>
-                    <div style={styles.heroRight}>
 
-                        <div style={{ ...styles.heroCircle, top: '70%', right: '30%' }}>
-                            <img src={bannerLearning} alt="Students"
-                                style={{ width: '550px', objectFit: 'contain', borderRadius: '12px' }} />
-                        </div>
-                        <div style={{ ...styles.floatBadge, top: '10%', right: '-35%' }} className="float-badge">
-                            <SchoolIcon style={{ fontSize: '16px', color: '#00a89d' }} />
-                            <span style={styles.floatBadgeText}>{stats.total} Courses Enrolled</span>
-                        </div>
-                        <div style={{ ...styles.floatBadge, bottom: '-15%', left: '-5%' }} className="float-badge-2">
-                            <EmojiEventsIcon style={{ fontSize: '16px', color: '#00a89d' }} />
-                            <span style={styles.floatBadgeText}>{stats.completed} Completed</span>
-                        </div>
-                        <div style={{ ...styles.dot, top: '120%', left: '-25%', width: '14px', height: '14px', opacity: 0.5 }} />
-                        <div style={{ ...styles.dot, bottom: '25%', right: '-25%', width: '20px', height: '20px', opacity: 0.3 }} />
-                        <div style={{ ...styles.dot, top: '55%', left: '-38%', width: '10px', height: '10px', opacity: 0.4 }} />
+                    {/* Actions */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <button className="theme-btn" title={dark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                            onClick={() => setDark(d => !d)}
+                            style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
+                            {dark ? <LightModeIcon style={{ fontSize: 20 }} /> : <DarkModeIcon style={{ fontSize: 20 }} />}
+                        </button>
+                        <button className="action-btn" onClick={() => navigate('/courses')} style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)',
+                            color: '#fff', padding: '10px 20px', borderRadius: 12,
+                            fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+                        }}>
+                            <MenuBookIcon style={{ fontSize: 17 }} /> Explore Courses
+                        </button>
                     </div>
                 </div>
-            </section>
 
-            {/* Stats Cards */}
-            <div style={styles.statsRow}>
-                <div style={styles.statCard}>
-                    <div style={{ ...styles.statIconWrap, backgroundColor: '#e8fafa' }}>
-                        <MenuBookIcon style={{ ...styles.statIcon, color: '#00b4b4' }} />
-                    </div>
-                    <div>
-                        <h3 style={styles.statNum}>{stats.total}</h3>
-                        <p style={styles.statLbl}>Total Enrolled</p>
-                    </div>
+                {/* ── Stat cards ── */}
+                <div style={{ maxWidth: 1380, margin: '22px auto 0', paddingBottom: 32, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 14 }}>
+                    {statCards.map((s, i) => (
+                        <div key={i} className="stat-card" style={{
+                            background: dark ? s.darkBg : s.lightBg,
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            borderRadius: 18, padding: '16px 20px',
+                            display: 'flex', alignItems: 'center', gap: 14,
+                            backdropFilter: 'blur(8px)',
+                        }}>
+                            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+                                {s.icon}
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', lineHeight: 1, fontFamily: "'DM Mono',monospace", letterSpacing: '-0.02em' }}>
+                                    {loading
+                                        ? <div className="skeleton" style={{ width: 40, height: 28, display: 'inline-block', verticalAlign: 'middle' }} />
+                                        : s.value}
+                                </div>
+                                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 4, fontWeight: 500, letterSpacing: '0.04em' }}>{s.label}</div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
-                <div style={styles.statCard}>
-                    <div style={{ ...styles.statIconWrap, backgroundColor: '#e6f7e6' }}>
-                        <EmojiEventsIcon style={{ ...styles.statIcon, color: '#2e7d32' }} />
-                    </div>
-                    <div>
-                        <h3 style={styles.statNum}>{stats.completed}</h3>
-                        <p style={styles.statLbl}>Completed</p>
-                    </div>
-                </div>
-                <div style={styles.statCard}>
-                    <div style={{ ...styles.statIconWrap, backgroundColor: '#fff3e0' }}>
-                        <TrendingUpIcon style={{ ...styles.statIcon, color: '#f39c12' }} />
-                    </div>
-                    <div>
-                        <h3 style={styles.statNum}>{stats.inProgress}</h3>
-                        <p style={styles.statLbl}>In Progress</p>
-                    </div>
-                </div>
-                <div style={styles.statCard}>
-                    <div style={{ ...styles.statIconWrap, backgroundColor: '#e8e8ff' }}>
-                        <SchoolIcon style={{ ...styles.statIcon, color: '#6c63ff' }} />
-                    </div>
-                    <div>
-                        <h3 style={styles.statNum}>{stats.averageProgress}%</h3>
-                        <p style={styles.statLbl}>Avg. Progress</p>
-                    </div>
-                </div>
-            </div>
+            </header>
 
-            {/* Search and Filter Section */}
-            <div id="enrollments-section" style={styles.filterSection}>
-                <div style={styles.filterBar}>
-                    <div style={styles.searchWrap}>
-                        <SearchIcon style={styles.searchIcon} />
-                        <input
-                            className="search-input"
-                            style={styles.searchInput}
-                            placeholder="Search by course title or instructor..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+            {/* ══ FILTERS ══ */}
+            <div style={{ maxWidth: 1380, margin: '28px auto 0', padding: '0 48px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+                    {/* Search */}
+                    <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
+                        <SearchIcon style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: T.muted, fontSize: 18, pointerEvents: 'none' }} />
+                        <input className="search-inp" value={searchTerm} onChange={e => setSearch(e.target.value)}
+                            placeholder="Search courses or instructors…"
+                            style={{ width: '100%', padding: '12px 40px 12px 42px', borderRadius: 12, border: `1.5px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 13, fontFamily: F, transition: 'all 0.2s' }} />
                         {searchTerm && (
-                            <button style={styles.clearBtn} onClick={() => setSearchTerm('')}>
-                                <CloseIcon style={{ fontSize: '16px', color: '#aaa' }} />
+                            <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: T.muted, display: 'flex', padding: 2 }}>
+                                <CloseIcon style={{ fontSize: 16 }} />
                             </button>
                         )}
                     </div>
 
-                    <button
-                        style={styles.filterToggleBtn}
-                        onClick={() => setShowFilters(!showFilters)}
-                    >
-                        <FilterListIcon /> Filters
+                    {/* Filter toggle */}
+                    <button className="chip-btn" onClick={() => setShowFilters(!showFilters)} style={{
+                        display: 'flex', alignItems: 'center', gap: 6, padding: '11px 18px', borderRadius: 12,
+                        border: `1.5px solid ${showFilters ? T.accent : T.border}`,
+                        background: showFilters ? (dark ? 'rgba(0,212,212,0.1)' : '#e6fafa') : T.surface,
+                        color: showFilters ? T.accent : T.muted,
+                        fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+                    }}>
+                        <FilterListIcon style={{ fontSize: 17 }} /> Filters
+                        {statusFilter !== 'all' && (
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.accent, display: 'inline-block', marginLeft: 2 }} />
+                        )}
                     </button>
 
-                    <select
-                        className="filter-select"
-                        style={styles.select}
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                    >
+                    {/* Sort */}
+                    <select value={sortBy} onChange={e => setSort(e.target.value)} style={{
+                        padding: '12px 18px', borderRadius: 12, border: `1.5px solid ${T.border}`,
+                        background: T.surface, color: T.text, fontSize: 13, fontFamily: F, cursor: 'pointer', outline: 'none', minWidth: 160,
+                    }}>
                         <option value="recent">Most Recent</option>
                         <option value="progress">Highest Progress</option>
                         <option value="title">Course Title</option>
                     </select>
 
-                    <span style={styles.resultsCount}>
+                    {/* Count badge */}
+                    <span style={{
+                        background: dark ? 'rgba(0,212,212,0.1)' : '#e6fafa',
+                        color: T.accent, padding: '6px 14px', borderRadius: 20,
+                        fontSize: 12, fontWeight: 700,
+                        border: `1px solid ${dark ? 'rgba(0,212,212,0.18)' : '#a7f0f0'}`,
+                    }}>
                         {filteredEnrollments.length} course{filteredEnrollments.length !== 1 ? 's' : ''}
                     </span>
+
+                    {/* View toggle */}
+                    <div style={{ marginLeft: 'auto', display: 'flex', background: T.surface, borderRadius: 12, border: `1.5px solid ${T.border}`, overflow: 'hidden' }}>
+                        {[{ mode: 'grid', Icon: AppsIcon }, { mode: 'list', Icon: ViewListIcon }].map(({ mode, Icon }) => (
+                            <button key={mode} className="toggle-btn" onClick={() => setViewMode(mode)} style={{
+                                padding: '10px 16px', border: 'none', cursor: 'pointer', fontFamily: F,
+                                background: viewMode === mode ? (dark ? 'rgba(0,212,212,0.12)' : '#e6fafa') : 'transparent',
+                                color: viewMode === mode ? T.accent : T.muted,
+                                display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600,
+                            }}>
+                                <Icon style={{ fontSize: 16 }} /> {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                {/* Filter Chips */}
+                {/* Status filter chips */}
                 {showFilters && (
-                    <div style={styles.filterChips}>
-                        <button
-                            className="category-chip"
-                            onClick={() => setStatusFilter('all')}
-                            style={{ ...styles.chip, ...(statusFilter === 'all' ? styles.chipActive : {}) }}
-                        >
-                            All
-                        </button>
-                        <button
-                            className="category-chip"
-                            onClick={() => setStatusFilter('active')}
-                            style={{ ...styles.chip, ...(statusFilter === 'active' ? styles.chipActive : {}) }}
-                        >
-                            Active
-                        </button>
-                        <button
-                            className="category-chip"
-                            onClick={() => setStatusFilter('completed')}
-                            style={{ ...styles.chip, ...(statusFilter === 'completed' ? styles.chipActive : {}) }}
-                        >
-                            Completed
-                        </button>
-                        <button
-                            className="category-chip"
-                            onClick={() => setStatusFilter('cancelled')}
-                            style={{ ...styles.chip, ...(statusFilter === 'cancelled' ? styles.chipActive : {}) }}
-                        >
-                            Cancelled
-                        </button>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingBottom: 8 }}>
+                        {['all', 'active', 'completed', 'cancelled'].map(s => (
+                            <button key={s} className="chip-btn" onClick={() => setStatus(s)} style={{
+                                padding: '7px 18px', borderRadius: 30,
+                                border: `1.5px solid ${statusFilter === s ? T.accent : T.border}`,
+                                background: statusFilter === s ? (dark ? 'rgba(0,212,212,0.12)' : '#e6fafa') : T.surface,
+                                color: statusFilter === s ? T.accent : T.muted,
+                                fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: F, textTransform: 'capitalize',
+                            }}>{s === 'all' ? 'All Courses' : s}</button>
+                        ))}
                     </div>
                 )}
             </div>
 
-            {/* View Toggle */}
-            <div style={styles.toggleWrapper}>
-                <button
-                    style={{
-                        ...styles.toggleBtn,
-                        backgroundColor: viewMode === "grid" ? "#00b4b4" : "#ccc",
-                    }}
-                    onClick={() => setViewMode("grid")}
-                >
-                    <AppsIcon style={{ fontSize: 18 }} /> Grid
-                </button>
-                <button
-                    style={{
-                        ...styles.toggleBtn,
-                        backgroundColor: viewMode === "list" ? "#00b4b4" : "#ccc",
-                    }}
-                    onClick={() => setViewMode("list")}
-                >
-                    <ViewListIcon style={{ fontSize: 18 }} /> List
-                </button>
-            </div>
-
-            {/* Main Content Area */}
-            <section style={styles.section}>
-                <div style={styles.mainContainer}>
-
-                    {/* LEFT SIDE: Enrollment Cards Container */}
-                    <div style={{
-                        ...styles.cardsContainer,
-                        flexDirection: viewMode === "list" ? "column" : "row",
-                    }}>
-                        {loading ? (
-                            <div style={styles.loadingWrap}>
-                                <div style={styles.spinner}></div>
-                                <p style={styles.loadingText}>Loading your courses...</p>
-                            </div>
-                        ) : filteredEnrollments.length === 0 ? (
-                            <div style={styles.emptyState}>
-                                <SchoolIcon style={{ fontSize: 48, color: '#ccc', marginBottom: 16 }} />
-                                <h3 style={styles.emptyTitle}>No Enrollments Found</h3>
-                                <p style={styles.emptyText}>
-                                    {searchTerm || statusFilter !== 'all'
-                                        ? 'Try adjusting your filters'
-                                        : 'Browse our courses and start your learning journey today!'}
-                                </p>
-                                <button
-                                    style={styles.browseBtn}
-                                    onClick={() => navigate('/courses')}
-                                >
-                                    Browse Courses
-                                </button>
-                            </div>
-                        ) : (
-                            filteredEnrollments.map((enroll) => {
-                                const progressColor = getProgressColor(enroll.progress);
-                                const statusColor = getStatusColor(enroll.status, enroll.progress);
-                                const statusIcon = getStatusIcon(enroll.status, enroll.progress);
-                                const displayStatus = getDisplayStatus(enroll.status, enroll.progress);
-
-                                return (
-                                    <div
-                                        key={enroll._id}
-                                        className="course-card"
-                                        style={{
-                                            ...styles.courseCard,
-                                            width: viewMode === "list" ? "100%" : "320px",
-                                            maxWidth: viewMode === "list" ? "100%" : "320px",
-                                            display: viewMode === "list" ? "flex" : "block",
-                                            alignItems: "center",
-                                            justifyContent: viewMode === "list" ? "space-between" : "initial",
-                                            gap: viewMode === "list" ? "20px" : "0",
-                                            boxSizing: "border-box",
-                                            borderTop: `4px solid ${statusColor}`,
-                                            cursor: 'pointer'
-                                        }}
-                                        onClick={() => openEnrollmentDetail(enroll)}
-                                    >
-                                        {/* Course info */}
-                                        <div style={{ flex: 1 }}>
-                                            <div style={styles.metaRow}>
-                                                <span style={{
-                                                    ...styles.courseCategory,
-                                                    backgroundColor: `${statusColor}15`,
-                                                    color: statusColor
-                                                }}>
-                                                    {statusIcon}
-                                                    <span style={{ marginLeft: 4 }}>{displayStatus}</span>
-                                                </span>
-                                            </div>
-                                            <h3 style={styles.courseTitle}>{enroll.courseTitle}</h3>
-                                            <div style={styles.metaRow}>
-                                                <PersonIcon style={styles.metaIcon} />
-                                                <span style={styles.metaText}>{enroll.instructor}</span>
-                                            </div>
-                                            <div style={styles.metaRow}>
-                                                <AccessTimeIcon style={styles.metaIcon} />
-                                                <span style={styles.metaText}>
-                                                    Enrolled: {new Date(enroll.enrolledAt).toLocaleDateString()}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Progress Circle */}
-                                        <div style={styles.progressCircleContainer}>
-                                            <svg width="70" height="70" viewBox="0 0 36 36">
-                                                <path
-                                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                                    fill="none"
-                                                    stroke="#eee"
-                                                    strokeWidth="3"
-                                                />
-                                                <path
-                                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                                    fill="none"
-                                                    stroke={progressColor}
-                                                    strokeWidth="3"
-                                                    strokeDasharray={`${enroll.progress}, 100`}
-                                                    strokeLinecap="round"
-                                                />
-                                                <text x="18" y="20.5" textAnchor="middle" fontSize="6" fill="#333" fontWeight="bold">
-                                                    {enroll.progress}%
-                                                </text>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                );
-                            })
+            {/* ══ MAIN CONTENT ══ */}
+            <main style={{ maxWidth: 1380, margin: '24px auto ', padding: '0 48px' }}>
+                {loading ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 20 }}>
+                        {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} T={T} />)}
+                    </div>
+                ) : filteredEnrollments.length === 0 ? (
+                    /* ── Empty state ── */
+                    <div style={{ textAlign: 'center', padding: '72px 20px', background: T.surface, borderRadius: 24, border: `1.5px solid ${T.border}`, boxShadow: `0 4px 24px ${T.shadow}` }}>
+                        <div style={{ width: 72, height: 72, borderRadius: 20, background: dark ? 'rgba(0,212,212,0.1)' : '#e6fafa', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                            <SchoolIcon style={{ fontSize: 36, color: T.accent }} />
+                        </div>
+                        <h3 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 10px', color: T.text }}>
+                            {searchTerm || statusFilter !== 'all' ? 'No Results Found' : 'No Courses Yet'}
+                        </h3>
+                        <p style={{ color: T.muted, fontSize: 14, marginBottom: 28, maxWidth: 340, margin: '0 auto 28px', lineHeight: 1.6 }}>
+                            {searchTerm || statusFilter !== 'all'
+                                ? 'Try adjusting your search or filter criteria.'
+                                : 'Enroll in a course to start tracking your progress here.'}
+                        </p>
+                        {!(searchTerm || statusFilter !== 'all') && (
+                            <button className="action-btn" onClick={() => navigate('/courses')} style={{
+                                padding: '13px 30px',
+                                background: T.accent,
+                                color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700,
+                                cursor: 'pointer', fontFamily: F, boxShadow: `0 6px 20px rgba(0,180,180,0.3)`,
+                            }}>Browse Courses</button>
+                        )}
+                        {(searchTerm || statusFilter !== 'all') && (
+                            <button className="action-btn" onClick={() => { setSearch(''); setStatus('all'); }} style={{
+                                padding: '10px 22px', background: 'transparent', border: `1.5px solid ${T.border}`,
+                                color: T.text, borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+                            }}>Clear Filters</button>
                         )}
                     </div>
 
-                    {/* RIGHT SIDE: Learning Insights (only in list view) */}
-                    {viewMode === "list" && filteredEnrollments.length > 0 && (
-                        <div style={styles.sideImgArea}>
-                            <div style={styles.insightsHeader}>
-                                <SchoolIcon style={{ fontSize: 32, color: '#00b4b4' }} />
-                                <h3 style={styles.insightsTitle}>Learning Insights</h3>
-                            </div>
+                ) : viewMode === 'grid' ? (
+                    /* ── GRID ── */
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 20 }}>
+                        {filteredEnrollments.map((enroll, idx) => {
+                            const sm = statusMeta(enroll.status, enroll.progress, dark);
+                            return (
+                                <div key={enroll._id} className="enroll-card" onClick={() => openDetail(enroll)}
+                                    style={{
+                                        background: T.surface, border: `1.5px solid ${T.border}`,
+                                        borderRadius: 20, padding: '22px 22px 18px', cursor: 'pointer',
+                                        boxShadow: `0 2px 14px ${T.shadow}`,
+                                        animationDelay: `${idx * 0.05}s`,
+                                        display: 'flex', flexDirection: 'column', gap: 14,
+                                    }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 20, background: sm.bg, color: sm.color, border: `1px solid ${sm.bdr}`, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                            {sm.icon} {sm.label}
+                                        </span>
+                                        <CircleProgress value={enroll.progress} size={58} dark={dark} />
+                                    </div>
+                                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: T.text, lineHeight: 1.45, flex: 1 }}>{enroll.courseTitle}</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: T.muted }}>
+                                            <PersonIcon style={{ fontSize: 15, color: T.accent }} /> {enroll.instructor}
+                                        </span>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: T.muted }}>
+                                            <AccessTimeIcon style={{ fontSize: 15, color: T.accent }} />
+                                            {new Date(enroll.enrolledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </span>
+                                    </div>
+                                    <div className="progress-track">
+                                        <div className="progress-bar" style={{ width: `${enroll.progress}%`, background: progressColor(enroll.progress) }} />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
 
-                            <div style={styles.insightsContent}>
-                                <div style={styles.insightItem}>
-                                    <span style={styles.insightLabel}>Total Learning Time</span>
-                                    <span style={styles.insightValue}>
-                                        {Math.round(stats.total * 15)} hours
-                                    </span>
-                                </div>
-                                <div style={styles.insightItem}>
-                                    <span style={styles.insightLabel}>Completion Rate</span>
-                                    <span style={styles.insightValue}>
-                                        {stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0}%
-                                    </span>
-                                </div>
-                                <div style={styles.insightItem}>
-                                    <span style={styles.insightLabel}>Active Courses</span>
-                                    <span style={styles.insightValue}>{stats.inProgress}</span>
-                                </div>
-                            </div>
-
-                            <div style={styles.progressSummary}>
-                                <div style={styles.summaryItem}>
-                                    <span style={styles.summaryLabel}>Completed</span>
-                                    <span style={{ ...styles.summaryValue, color: '#2e7d32' }}>{stats.completed}</span>
-                                </div>
-                                <div style={styles.summaryItem}>
-                                    <span style={styles.summaryLabel}>In Progress</span>
-                                    <span style={{ ...styles.summaryValue, color: '#f39c12' }}>{stats.inProgress}</span>
-                                </div>
-                                <div style={styles.summaryItem}>
-                                    <span style={styles.summaryLabel}>Avg. Progress</span>
-                                    <span style={{ ...styles.summaryValue, color: '#00b4b4' }}>{stats.averageProgress}%</span>
-                                </div>
-                            </div>
-
-                            <p style={styles.insightsFooter}>
-                                Click on any course to update your progress!
-                            </p>
+                ) : (
+                    /* ── LIST ── */
+                    <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {filteredEnrollments.map((enroll, idx) => {
+                                const sm = statusMeta(enroll.status, enroll.progress, dark);
+                                return (
+                                    <div key={enroll._id} className="enroll-card" onClick={() => openDetail(enroll)}
+                                        style={{
+                                            background: T.surface, border: `1.5px solid ${T.border}`, borderLeft: `4px solid ${sm.color}`,
+                                            borderRadius: 18, padding: '18px 22px', cursor: 'pointer',
+                                            boxShadow: `0 2px 12px ${T.shadow}`,
+                                            display: 'flex', alignItems: 'center', gap: 22,
+                                            animationDelay: `${idx * 0.04}s`,
+                                        }}>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 11px', borderRadius: 20, background: sm.bg, color: sm.color, border: `1px solid ${sm.bdr}`, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
+                                                {sm.icon} {sm.label}
+                                            </span>
+                                            <h3 style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{enroll.courseTitle}</h3>
+                                            <div style={{ display: 'flex', gap: 18 }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: T.muted }}>
+                                                    <PersonIcon style={{ fontSize: 14, color: T.accent }} /> {enroll.instructor}
+                                                </span>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: T.muted }}>
+                                                    <AccessTimeIcon style={{ fontSize: 14, color: T.accent }} />
+                                                    {new Date(enroll.enrolledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+                                            <div style={{ width: 120 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                                                    <span style={{ fontSize: 11, color: T.muted }}>Progress</span>
+                                                    <span style={{ fontSize: 11, fontWeight: 700, color: progressColor(enroll.progress), fontFamily: "'DM Mono',monospace" }}>{enroll.progress}%</span>
+                                                </div>
+                                                <div className="progress-track">
+                                                    <div className="progress-bar" style={{ width: `${enroll.progress}%`, background: progressColor(enroll.progress) }} />
+                                                </div>
+                                            </div>
+                                            <CircleProgress value={enroll.progress} size={52} dark={dark} />
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    )}
-                </div>
-            </section>
 
-            {/* Course Detail Modal (keep existing modal code) */}
-            {modalOpen && selectedEnrollment && (
-                <div style={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
-                    <div style={styles.modal} className="modal-anim">
-                        {/* Modal Header */}
+                        {/* Insights sidebar */}
+                        <div style={{ width: 270, flexShrink: 0, position: 'sticky', top: 20, background: T.surface, borderRadius: 20, border: `1.5px solid ${T.border}`, padding: 22, boxShadow: `0 4px 24px ${T.shadow}` }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                                <div style={{ width: 34, height: 34, borderRadius: 10, background: dark ? 'rgba(0,212,212,0.1)' : '#e6fafa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <TrendingUpIcon style={{ color: T.accent, fontSize: 18 }} />
+                                </div>
+                                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: T.text }}>Learning Insights</h3>
+                            </div>
+                            {[
+                                { label: 'Total Learning',    value: `~${stats.total * 15}h` },
+                                { label: 'Completion Rate',   value: `${stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0}%` },
+                                { label: 'Active Courses',    value: stats.inProgress },
+                                { label: 'Avg Progress',      value: `${stats.averageProgress}%` },
+                            ].map(({ label, value }, i) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: i < 3 ? `1px solid ${T.border}` : 'none' }}>
+                                    <span style={{ fontSize: 12, color: T.muted }}>{label}</span>
+                                    <span style={{ fontSize: 14, fontWeight: 700, color: T.accent, fontFamily: "'DM Mono',monospace" }}>{value}</span>
+                                </div>
+                            ))}
+                            <p style={{ fontSize: 11, color: T.muted, textAlign: 'center', marginTop: 16, fontStyle: 'italic', lineHeight: 1.5 }}>Click any card to view details or update progress</p>
+                        </div>
+                    </div>
+                )}
+            </main>
+
+            {/* ══ MODAL ══ */}
+            {modalOpen && selectedEnrollment && (() => {
+                const sm      = statusMeta(selectedEnrollment.status, selectedEnrollment.progress, dark);
+                const isCancelled = getDisplayStatus(selectedEnrollment.status, selectedEnrollment.progress) === 'cancelled';
+                const isComplete  = selectedEnrollment.progress === 100;
+                const canCancel   = !isCancelled && !isComplete && selectedEnrollment.progress < 50;
+                return (
+                    <div onClick={e => { if (e.target === e.currentTarget) closeModal(); }} style={{
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.48)', backdropFilter: 'blur(6px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20,
+                    }}>
                         <div style={{
-                            ...styles.modalHeader,
-                            background: `linear-gradient(135deg, ${getStatusColor(selectedEnrollment.status)} 0%, ${getStatusColor(selectedEnrollment.status)}dd 100%)`
+                            background: T.surface, borderRadius: 26, maxWidth: 560, width: '100%',
+                            maxHeight: '90vh', overflow: 'hidden',
+                            border: `1.5px solid ${T.border}`,
+                            boxShadow: `0 28px 80px ${dark ? 'rgba(0,0,0,0.75)' : 'rgba(0,100,100,0.18)'}`,
+                            animation: 'modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+                            display: 'flex', flexDirection: 'column',
                         }}>
-                            <div style={styles.modalHeaderContent}>
-                                <SchoolIcon style={{ fontSize: 32, color: '#fff' }} />
-                                <div style={{ flex: 1 }}>
-                                    <p style={styles.modalCategory}>{selectedEnrollment.status}</p>
-                                    <h2 style={styles.modalTitle}>{selectedEnrollment.courseTitle}</h2>
-                                </div>
-                                <button style={styles.modalCloseBtn} onClick={closeModal}>
-                                    <CloseIcon style={{ fontSize: 18, color: '#fff' }} />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Modal Body */}
-                        <div style={styles.modalBody}>
-                            {/* Instructor and Enrollment Date */}
-                            <div style={styles.modalInfoGrid}>
-                                <div style={styles.modalInfoItem}>
-                                    <PersonIcon style={styles.modalInfoIcon} />
-                                    <div>
-                                        <p style={styles.modalInfoLabel}>Instructor</p>
-                                        <p style={styles.modalInfoValue}>{selectedEnrollment.instructor}</p>
+                            {/* Modal header */}
+                            <div style={{ padding: '26px 26px 22px', background: T.hdr, position: 'relative', flexShrink: 0 }}>
+                                <button onClick={closeModal} style={{
+                                    position: 'absolute', top: 18, right: 18, width: 32, height: 32, borderRadius: '50%',
+                                    background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff',
+                                }}><CloseIcon style={{ fontSize: 15 }} /></button>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, paddingRight: 40 }}>
+                                    <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <SchoolIcon style={{ fontSize: 24, color: '#fff' }} />
                                     </div>
-                                </div>
-                                <div style={styles.modalInfoItem}>
-                                    <AccessTimeIcon style={styles.modalInfoIcon} />
                                     <div>
-                                        <p style={styles.modalInfoLabel}>Enrolled On</p>
-                                        <p style={styles.modalInfoValue}>
-                                            {new Date(selectedEnrollment.enrolledAt).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'long',
-                                                day: 'numeric'
-                                            })}
-                                        </p>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 11px', borderRadius: 20, background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                                            {sm.icon} {sm.label}
+                                        </span>
+                                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#fff', lineHeight: 1.35 }}>{selectedEnrollment.courseTitle}</h2>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Progress Section */}
-                            <div style={styles.progressSection}>
-                                <div style={styles.progressHeader}>
-                                    <h3 style={styles.progressTitle}>Course Progress</h3>
-                                    {!editingProgress ? (
-                                        <button
-                                            style={styles.editProgressBtn}
-                                            onClick={() => setEditingProgress(true)}
-                                            disabled={selectedEnrollment.status === 'cancelled' || selectedEnrollment.progress === 100}
-                                        >
-                                            <EditIcon style={{ fontSize: 16 }} /> Update Progress
-                                        </button>
-                                    ) : (
-                                        <button
-                                            style={styles.saveProgressBtn}
-                                            onClick={updateProgress}
-                                            disabled={updatingProgress}
-                                        >
-                                            {updatingProgress ? (
-                                                <div style={styles.smallSpinner} />
-                                            ) : (
-                                                <SaveIcon style={{ fontSize: 16 }} />
+                            {/* Modal body */}
+                            <div className="modal-scroll" style={{ padding: 26, flex: 1, overflowY: 'auto' }}>
+                                {/* Info grid */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                                    {[
+                                        { icon: <PersonIcon style={{ fontSize: 16, color: T.accent }} />, label: 'Instructor', value: selectedEnrollment.instructor },
+                                        { icon: <AccessTimeIcon style={{ fontSize: 16, color: T.accent }} />, label: 'Enrolled On', value: new Date(selectedEnrollment.enrolledAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) },
+                                    ].map(({ icon, label, value }, i) => (
+                                        <div key={i} style={{ background: T.surface2, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, border: `1px solid ${T.border}` }}>
+                                            <div style={{ width: 34, height: 34, borderRadius: 10, background: dark ? 'rgba(0,212,212,0.1)' : '#e6fafa', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                {icon}
+                                            </div>
+                                            <div style={{ minWidth: 0 }}>
+                                                <p style={{ margin: 0, fontSize: 10, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{label}</p>
+                                                <p style={{ margin: '3px 0 0', fontSize: 13, fontWeight: 600, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Progress section */}
+                                <div style={{ background: T.surface2, borderRadius: 18, padding: 20, marginBottom: 20, border: `1px solid ${T.border}` }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                                        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: T.text, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Course Progress</h3>
+                                        {!editingProgress ? (
+                                            <button className="action-btn" onClick={() => setEditing(true)}
+                                                disabled={isCancelled || isComplete}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10,
+                                                    background: dark ? 'rgba(0,212,212,0.1)' : '#e6fafa', color: T.accent,
+                                                    border: `1px solid ${dark ? 'rgba(0,212,212,0.2)' : '#a7f0f0'}`,
+                                                    fontSize: 12, fontWeight: 600, cursor: isCancelled || isComplete ? 'not-allowed' : 'pointer',
+                                                    fontFamily: F, opacity: (isCancelled || isComplete) ? 0.4 : 1,
+                                                }}>
+                                                <EditIcon style={{ fontSize: 14 }} /> Update Progress
+                                            </button>
+                                        ) : (
+                                            <div style={{ display: 'flex', gap: 8 }}>
+                                                <button className="action-btn" onClick={() => setEditing(false)} style={{
+                                                    display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 10,
+                                                    background: 'transparent', color: T.muted, border: `1px solid ${T.border}`,
+                                                    fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+                                                }}>
+                                                    <CloseIcon style={{ fontSize: 13 }} /> Cancel
+                                                </button>
+                                                <button className="action-btn" onClick={handleUpdateProgress} disabled={updatingProgress} style={{
+                                                    display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10,
+                                                    background: dark ? 'rgba(13,159,110,0.12)' : '#edfaf4',
+                                                    color: dark ? '#22c98a' : '#0d9f6e',
+                                                    border: `1px solid ${dark ? 'rgba(13,159,110,0.22)' : '#b6ead8'}`,
+                                                    fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+                                                }}>
+                                                    {updatingProgress
+                                                        ? <div style={{ width: 13, height: 13, border: `2px solid ${dark ? 'rgba(34,201,138,0.3)' : '#b6ead8'}`, borderTop: `2px solid ${dark ? '#22c98a' : '#0d9f6e'}`, borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                                                        : <SaveIcon style={{ fontSize: 14 }} />}
+                                                    {updatingProgress ? 'Saving…' : 'Save'}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {editingProgress ? (
+                                        <div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+                                                <span style={{ fontSize: 36, fontWeight: 800, color: progressColor(newProgress), fontFamily: "'DM Mono',monospace", letterSpacing: '-0.02em' }}>
+                                                    {newProgress}%
+                                                </span>
+                                                <span style={{ fontSize: 12, color: T.muted, padding: '5px 12px', background: T.surface, borderRadius: 20, border: `1px solid ${T.border}` }}>
+                                                    {newProgress === 100 ? '🎉 Course complete!' : newProgress > 0 ? 'In progress' : 'Not started'}
+                                                </span>
+                                            </div>
+                                            <input type="range" min="0" max="100" step="5" value={newProgress}
+                                                onChange={e => setNewProgress(parseInt(e.target.value))}
+                                                style={{ width: '100%', height: 4, borderRadius: 4, marginBottom: 8 }} />
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.muted }}>
+                                                <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+                                            </div>
+                                            {newProgress < selectedEnrollment.progress && (
+                                                <p style={{ fontSize: 11, color: dark ? '#f06b6b' : '#c53030', marginTop: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                                    <WarningAmberIcon style={{ fontSize: 13 }} /> Progress can only move forward.
+                                                </p>
                                             )}
-                                            {updatingProgress ? 'Saving...' : 'Save'}
-                                        </button>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                                                <span style={{ fontSize: 36, fontWeight: 800, color: progressColor(selectedEnrollment.progress), fontFamily: "'DM Mono',monospace", letterSpacing: '-0.02em' }}>
+                                                    {selectedEnrollment.progress}%
+                                                </span>
+                                                {isComplete && (
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 20, background: dark ? 'rgba(34,201,138,0.12)' : '#edfaf4', color: dark ? '#22c98a' : '#0d9f6e', fontSize: 12, fontWeight: 700 }}>
+                                                        <EmojiEventsIcon style={{ fontSize: 15 }} /> Completed!
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="progress-track">
+                                                <div className="progress-bar" style={{ width: `${selectedEnrollment.progress}%`, background: progressColor(selectedEnrollment.progress) }} />
+                                            </div>
+                                            {!isComplete && !isCancelled && (
+                                                <p style={{ margin: '10px 0 0', fontSize: 12, color: T.muted }}>
+                                                    {selectedEnrollment.progress === 0 ? 'Not started yet — click Update Progress to begin tracking.' : `${100 - selectedEnrollment.progress}% remaining to complete this course.`}
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
 
-                                {editingProgress ? (
-                                    <div style={styles.progressEditor}>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="100"
-                                            step="5"
-                                            value={newProgress}
-                                            onChange={(e) => setNewProgress(parseInt(e.target.value))}
-                                            style={styles.progressSlider}
-                                        />
-                                        <div style={styles.progressValueDisplay}>
-                                            <span style={styles.progressValue}>{newProgress}%</span>
-                                            <span style={styles.progressStatus}>
-                                                {newProgress === 100 ? 'Completed!' :
-                                                    newProgress > 0 ? 'In Progress' : 'Not Started'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div style={styles.progressDisplay}>
-                                        <div style={styles.progressBar}>
-                                            <div style={{
-                                                ...styles.progressFill,
-                                                width: `${selectedEnrollment.progress}%`,
-                                                backgroundColor: getProgressColor(selectedEnrollment.progress)
-                                            }} />
-                                        </div>
-                                        <div style={styles.progressStats}>
-                                            <span style={styles.progressPercentage}>
-                                                {selectedEnrollment.progress}% Complete
-                                            </span>
-                                            {selectedEnrollment.progress === 100 && (
-                                                <span style={styles.completedBadge}>
-                                                    <EmojiEventsIcon style={{ fontSize: 16 }} /> Course Completed!
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div style={styles.modalActions}>
-                                {selectedEnrollment.status !== 'cancelled' && selectedEnrollment.progress < 50 && (
-                                    <button
-                                        style={styles.cancelEnrollmentBtn}
-                                        onClick={() => {
-                                            closeModal();
-                                            cancelEnrollment(selectedEnrollment._id, selectedEnrollment.courseTitle, selectedEnrollment.progress);
-                                        }}
-                                    >
-                                        <CancelIcon style={{ fontSize: 18 }} /> Cancel Enrollment
+                                {/* Cancel section */}
+                                {canCancel && !showCancelConfirm && (
+                                    <button className="action-btn" onClick={() => setShowCancelConfirm(true)} style={{
+                                        display: 'flex', alignItems: 'center', gap: 6, padding: '11px 18px', borderRadius: 12, width: '100%',
+                                        background: dark ? 'rgba(185,28,28,0.08)' : '#fff1f1',
+                                        color: dark ? '#f06b6b' : '#c53030',
+                                        border: `1px solid ${dark ? 'rgba(185,28,28,0.2)' : '#fecaca'}`,
+                                        fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+                                        justifyContent: 'center',
+                                    }}>
+                                        <CancelIcon style={{ fontSize: 16 }} /> Cancel Enrollment
                                     </button>
                                 )}
-                                <button
-                                    style={styles.closeModalBtn}
-                                    onClick={closeModal}
-                                >
-                                    Close
-                                </button>
+
+                                {showCancelConfirm && (
+                                    <ConfirmDialog
+                                        title="Cancel this enrollment?"
+                                        message={`You'll lose your progress in "${selectedEnrollment.courseTitle}". This action cannot be undone.`}
+                                        onConfirm={handleCancelConfirmed}
+                                        onDismiss={() => setShowCancelConfirm(false)}
+                                        T={T} F={F} loading={cancellingEnrollment}
+                                    />
+                                )}
+
+                                {/* Footer close */}
+                                {!showCancelConfirm && (
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                                        <button onClick={closeModal} style={{
+                                            padding: '10px 26px', borderRadius: 12,
+                                            background: T.surface2, color: T.muted, border: `1px solid ${T.border}`,
+                                            fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+                                        }}>Close</button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 };
-
-const styles = {
-    page: {
-        fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
-        backgroundColor: "#f5f6fa",
-        minHeight: "100vh"
-    },
-    hero: {
-        position: 'relative',
-        background: 'linear-gradient(135deg, #f0fafa 0%, #e0f7f6 50%, #ccf0ee 100%)',
-        padding: '70px 60px',
-        overflow: 'hidden',
-        minHeight: '300px',
-    },
-    blob1: {
-        position: 'absolute', top: '-60px', right: '25%',
-        width: '220px', height: '220px', borderRadius: '50%',
-        background: 'rgba(0,168,157,0.25)', pointerEvents: 'none',
-    },
-    blob2: {
-        position: 'absolute', bottom: '-40px', right: '-2%',
-        width: '160px', height: '160px', borderRadius: '50%',
-        background: 'rgba(0,168,157,0.35)', pointerEvents: 'none',
-    },
-    blob3: {
-        position: 'absolute', top: '20%', left: '-20%',
-        width: '220px', height: '220px', borderRadius: '50%',
-        background: 'rgba(0,168,157,0.3)', pointerEvents: 'none',
-    },
-
-    heroInner: {
-        position: 'relative', zIndex: 1,
-        display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', gap: '5px',
-        maxWidth: '100%', margin: '0 auto',
-        marginLeft: '160px', marginRight: '160px', height: '300px'
-    },
-    heroLeft: { flex: 1, maxWidth: '650px' },
-    heroEyebrow: {
-        display: 'inline-block', backgroundColor: '#00a89d', color: '#fff',
-        padding: '5px 16px', borderRadius: '20px', fontSize: '13px',
-        fontWeight: '700', marginBottom: '18px',
-    },
-    heroTitle: {
-        fontSize: '48px', fontWeight: '800', color: '#004040',
-        margin: '0 0 18px', lineHeight: '1.2',
-    },
-    heroSub: { fontSize: '17px', color: '#1a5050', lineHeight: '1.8', margin: '0 0 30px' },
-    heroBtns: { display: 'flex', gap: '14px', flexWrap: 'wrap' },
-    heroBtnPrimary: {
-        backgroundColor: '#00a89d', color: '#fff', border: 'none',
-        padding: '13px 32px', borderRadius: '8px', cursor: 'pointer',
-        fontSize: '15px', fontWeight: '700', transition: 'all 0.2s',
-        boxShadow: '0 4px 14px rgba(0,168,157,0.3)', fontFamily: "'DM Sans', sans-serif",
-    },
-    heroBtnSecondary: {
-        backgroundColor: '#fff', color: '#00a89d', border: '1.5px solid #00a89d',
-        padding: '13px 32px', borderRadius: '8px', cursor: 'pointer',
-        fontSize: '15px', fontWeight: '700', transition: 'all 0.2s', fontFamily: "'DM Sans', sans-serif",
-    },
-    heroRight: { position: 'relative', width: '360px', height: '300px', flexShrink: 0 },
-    heroCircle: {
-        position: 'absolute', top: '65%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: '480px', height: '480px', borderRadius: '50%',
-        //background: 'linear-gradient(135deg, #00a89d, #007a75)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        //boxShadow: '0 12px 40px rgba(0,168,157,0.35)',
-    },
-    floatBadge: {
-        position: 'absolute', backgroundColor: '#fff', borderRadius: '30px',
-        padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '7px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.1)', fontSize: '12px',
-        fontWeight: '600', color: '#2c3e50', whiteSpace: 'nowrap',
-    },
-    floatBadgeText: { fontSize: '12px', color: '#2c3e50', fontWeight: '600' },
-    dot: {
-        position: 'absolute', borderRadius: '50%',
-        background: 'linear-gradient(135deg, #00a89d, #007a75)',
-    },
-    statsRow: {
-        display: 'flex',
-        gap: '20px',
-        padding: '30px 60px 0',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        maxWidth: '1400px',
-        margin: '0 auto'
-    },
-    statCard: {
-        backgroundColor: '#fff',
-        borderRadius: '12px',
-        padding: '20px 30px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '20px',
-        boxShadow: '0 3px 12px rgba(0,0,0,0.07)',
-        flex: '1',
-        minWidth: '180px'
-    },
-    statIconWrap: {
-        width: '55px',
-        height: '55px',
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-    },
-    statIcon: {
-        fontSize: '28px'
-    },
-    statNum: {
-        fontSize: '28px',
-        fontWeight: 'bold',
-        color: '#2c3e50',
-        margin: 0
-    },
-    statLbl: {
-        color: '#888',
-        fontSize: '13px',
-        margin: 0
-    },
-    filterSection: {
-        padding: '30px 60px 0',
-        maxWidth: '1400px',
-        margin: '0 auto'
-    },
-    filterBar: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '14px',
-        marginBottom: '18px',
-        flexWrap: 'wrap'
-    },
-    searchWrap: {
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center',
-        flex: 1,
-        minWidth: '220px'
-    },
-    searchIcon: {
-        position: 'absolute',
-        left: '16px',
-        color: '#bbb',
-        fontSize: '20px',
-        pointerEvents: 'none'
-    },
-    searchInput: {
-        width: '100%',
-        padding: '13px 42px 13px 46px',
-        borderRadius: '30px',
-        border: '1.5px solid #e0e0e0',
-        fontSize: '14px',
-        outline: 'none',
-        backgroundColor: '#fff',
-        transition: 'border-color 0.2s, box-shadow 0.2s',
-        fontFamily: "'DM Sans', sans-serif",
-    },
-    clearBtn: {
-        position: 'absolute',
-        right: '14px',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '2px',
-    },
-    filterToggleBtn: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '11px 20px',
-        borderRadius: '30px',
-        border: '1.5px solid #e0e0e0',
-        backgroundColor: '#fff',
-        color: '#555',
-        fontSize: '14px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        ':hover': {
-            backgroundColor: '#f5f5f5'
-        }
-    },
-    select: {
-        padding: '13px 20px',
-        borderRadius: '30px',
-        border: '1.5px solid #e0e0e0',
-        fontSize: '14px',
-        backgroundColor: '#fff',
-        cursor: 'pointer',
-        minWidth: '170px',
-        fontFamily: "'DM Sans', sans-serif",
-    },
-    resultsCount: {
-        color: '#aaa',
-        fontSize: '13px',
-        whiteSpace: 'nowrap',
-        fontWeight: '600'
-    },
-    filterChips: {
-        display: 'flex',
-        gap: '10px',
-        flexWrap: 'wrap',
-        marginBottom: '20px'
-    },
-    chip: {
-        padding: '7px 18px',
-        borderRadius: '30px',
-        border: '1.5px solid #e0e0e0',
-        backgroundColor: '#fff',
-        color: '#666',
-        fontSize: '13px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        transition: 'all 0.18s',
-        fontFamily: "'DM Sans', sans-serif",
-    },
-    chipActive: {
-        backgroundColor: '#00b4b4',
-        borderColor: '#00b4b4',
-        color: '#fff',
-        boxShadow: '0 4px 12px rgba(0,180,180,0.3)',
-    },
-    section: {
-        padding: "30px 60px 60px"
-    },
-    mainContainer: {
-        display: "flex",
-        flexDirection: "row",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        gap: "30px",
-        width: "100%",
-        maxWidth: "1400px",
-        margin: "0 auto"
-    },
-    cardsContainer: {
-        flex: 1,
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "25px",
-        justifyContent: "flex-start"
-    },
-    toggleWrapper: {
-        textAlign: "right",
-        display: "flex",
-        justifyContent: "flex-end",
-        maxWidth: "1400px",
-        margin: "20px auto 0",
-        padding: "0 60px"
-    },
-    toggleBtn: {
-        padding: "8px 16px",
-        margin: "0 5px",
-        border: "none",
-        borderRadius: "6px",
-        color: "#fff",
-        cursor: "pointer",
-        fontWeight: "600",
-        display: "flex",
-        alignItems: "center",
-        gap: "5px",
-        transition: 'background-color 0.2s'
-    },
-    courseCard: {
-        backgroundColor: "#fff",
-        borderRadius: "12px",
-        padding: "25px",
-        boxShadow: "0 3px 12px rgba(0,0,0,0.07)",
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        ':hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: '0 6px 18px rgba(0,0,0,0.1)'
-        }
-    },
-    courseCategory: {
-        padding: "4px 12px",
-        borderRadius: "15px",
-        fontSize: "12px",
-        fontWeight: "600",
-        display: "inline-flex",
-        alignItems: "center",
-        marginBottom: "10px",
-        textTransform: 'capitalize'
-    },
-    courseTitle: {
-        fontSize: "17px",
-        color: "#2c3e50",
-        marginBottom: "14px",
-        fontWeight: '700'
-    },
-    metaRow: {
-        display: "flex",
-        alignItems: "center",
-        gap: "7px",
-        marginBottom: "10px"
-    },
-    metaIcon: {
-        color: "#00b4b4",
-        fontSize: "18px"
-    },
-    metaText: {
-        color: "#888",
-        fontSize: "13px"
-    },
-    progressCircleContainer: {
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: '10px'
-    },
-    sideImgArea: {
-        flex: "0 0 400px",
-        position: "sticky",
-        top: "20px",
-        backgroundColor: "#fff",
-        borderRadius: "16px",
-        padding: "25px",
-        boxShadow: "0 3px 12px rgba(0,0,0,0.07)",
-        boxSizing: "border-box"
-    },
-    insightsHeader: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        marginBottom: '20px'
-    },
-    insightsTitle: {
-        fontSize: '20px',
-        fontWeight: '700',
-        color: '#2c3e50',
-        margin: 0
-    },
-    insightsContent: {
-        backgroundColor: '#f8f9fa',
-        borderRadius: '12px',
-        padding: '15px',
-        marginBottom: '20px'
-    },
-    insightItem: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '8px 0',
-        borderBottom: '1px solid #eee'
-    },
-    insightLabel: {
-        fontSize: '13px',
-        color: '#666'
-    },
-    insightValue: {
-        fontSize: '14px',
-        fontWeight: '700',
-        color: '#00b4b4'
-    },
-    progressSummary: {
-        padding: '15px',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '12px',
-        marginBottom: '15px'
-    },
-    summaryItem: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '8px 0',
-        borderBottom: '1px solid #eee'
-    },
-    summaryLabel: {
-        fontSize: '13px',
-        color: '#666'
-    },
-    summaryValue: {
-        fontSize: '14px',
-        fontWeight: '700'
-    },
-    insightsFooter: {
-        fontSize: '13px',
-        color: '#888',
-        textAlign: 'center',
-        marginTop: '15px',
-        fontStyle: 'italic'
-    },
-    loadingWrap: {
-        textAlign: 'center',
-        padding: '60px',
-        width: '100%'
-    },
-    spinner: {
-        width: '40px',
-        height: '40px',
-        border: '3px solid #f0f0f0',
-        borderTop: '3px solid #00b4b4',
-        borderRadius: '50%',
-        animation: 'spin 0.7s linear infinite',
-        margin: '0 auto 14px'
-    },
-    smallSpinner: {
-        width: '16px',
-        height: '16px',
-        border: '2px solid #f0f0f0',
-        borderTop: '2px solid #fff',
-        borderRadius: '50%',
-        animation: 'spin 0.7s linear infinite',
-        marginRight: '6px'
-    },
-    loadingText: {
-        color: '#888',
-        fontSize: '15px'
-    },
-    emptyState: {
-        textAlign: 'center',
-        padding: '80px 20px',
-        width: '100%',
-        backgroundColor: '#fff',
-        borderRadius: '12px',
-        boxShadow: '0 3px 12px rgba(0,0,0,0.07)'
-    },
-    emptyTitle: {
-        fontSize: '20px',
-        color: '#2c3e50',
-        marginBottom: '8px',
-        fontWeight: '700'
-    },
-    emptyText: {
-        fontSize: '14px',
-        color: '#888',
-        marginBottom: '20px'
-    },
-    browseBtn: {
-        padding: '12px 30px',
-        backgroundColor: '#00b4b4',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: '14px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s',
-        ':hover': {
-            backgroundColor: '#009999'
-        }
-    },
-    confirmBtn: {
-        backgroundColor: "#ff4d4f",
-        border: "none",
-        padding: "6px 12px",
-        color: "#fff",
-        borderRadius: "6px",
-        cursor: "pointer",
-        fontWeight: '600'
-    },
-    cancelConfirmBtn: {
-        backgroundColor: "#ccc",
-        border: "none",
-        padding: "6px 12px",
-        borderRadius: "6px",
-        cursor: "pointer",
-        fontWeight: '600'
-    },
-    overlay: {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '20px'
-    },
-    modal: {
-        backgroundColor: '#fff',
-        borderRadius: '16px',
-        maxWidth: '600px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflow: 'hidden',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-        animation: 'modalIn 0.3s ease'
-    },
-    modalHeader: {
-        padding: '24px',
-        color: '#fff'
-    },
-    modalHeaderContent: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px'
-    },
-    modalCategory: {
-        fontSize: '12px',
-        textTransform: 'uppercase',
-        letterSpacing: '0.1em',
-        opacity: 0.9,
-        margin: '0 0 4px'
-    },
-    modalTitle: {
-        fontSize: '20px',
-        fontWeight: 'bold',
-        margin: 0
-    },
-    modalCloseBtn: {
-        background: 'rgba(255,255,255,0.2)',
-        border: 'none',
-        borderRadius: '50%',
-        width: '32px',
-        height: '32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        color: '#fff',
-        transition: 'background-color 0.2s',
-        ':hover': {
-            background: 'rgba(255,255,255,0.3)'
-        }
-    },
-    modalBody: {
-        padding: '24px',
-        overflowY: 'auto',
-        maxHeight: 'calc(90vh - 140px)'
-    },
-    modalInfoGrid: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '16px',
-        marginBottom: '24px'
-    },
-    modalInfoItem: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '12px',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '10px'
-    },
-    modalInfoIcon: {
-        color: '#00b4b4',
-        fontSize: '20px'
-    },
-    modalInfoLabel: {
-        fontSize: '11px',
-        color: '#888',
-        textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        margin: '0 0 2px'
-    },
-    modalInfoValue: {
-        fontSize: '14px',
-        color: '#2c3e50',
-        fontWeight: '600',
-        margin: 0
-    },
-    progressSection: {
-        marginBottom: '24px'
-    },
-    progressHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '12px'
-    },
-    progressTitle: {
-        fontSize: '16px',
-        fontWeight: '600',
-        color: '#2c3e50',
-        margin: 0
-    },
-    editProgressBtn: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        padding: '6px 12px',
-        backgroundColor: '#00b4b4',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '6px',
-        fontSize: '12px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s',
-        ':hover': {
-            backgroundColor: '#009999'
-        },
-        ':disabled': {
-            backgroundColor: '#ccc',
-            cursor: 'not-allowed'
-        }
-    },
-    saveProgressBtn: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        padding: '6px 12px',
-        backgroundColor: '#2e7d32',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '6px',
-        fontSize: '12px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s',
-        ':hover': {
-            backgroundColor: '#1e5a22'
-        },
-        ':disabled': {
-            backgroundColor: '#ccc',
-            cursor: 'not-allowed'
-        }
-    },
-    progressDisplay: {
-        width: '100%'
-    },
-    progressBar: {
-        height: '8px',
-        backgroundColor: '#eee',
-        borderRadius: '4px',
-        overflow: 'hidden',
-        marginBottom: '8px'
-    },
-    progressFill: {
-        height: '100%',
-        borderRadius: '4px',
-        transition: 'width 0.3s ease'
-    },
-    progressStats: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-    },
-    progressPercentage: {
-        fontSize: '14px',
-        fontWeight: '600',
-        color: '#2c3e50'
-    },
-    completedBadge: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        padding: '4px 8px',
-        backgroundColor: '#e6f7e6',
-        color: '#2e7d32',
-        borderRadius: '6px',
-        fontSize: '12px',
-        fontWeight: '600'
-    },
-    progressEditor: {
-        marginTop: '8px'
-    },
-    progressSlider: {
-        width: '100%',
-        height: '6px',
-        borderRadius: '3px',
-        background: '#eee',
-        outline: 'none',
-        WebkitAppearance: 'none',
-        marginBottom: '12px'
-    },
-    progressValueDisplay: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-    },
-    progressValue: {
-        fontSize: '18px',
-        fontWeight: 'bold',
-        color: '#00b4b4'
-    },
-    progressStatus: {
-        fontSize: '13px',
-        color: '#888'
-    },
-    modalActions: {
-        display: 'flex',
-        gap: '12px',
-        justifyContent: 'flex-end',
-        borderTop: '1px solid #eee',
-        paddingTop: '20px'
-    },
-    cancelEnrollmentBtn: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '10px 16px',
-        backgroundColor: '#ff4d4f',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: '14px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s',
-        ':hover': {
-            backgroundColor: '#ff3335'
-        }
-    },
-    closeModalBtn: {
-        padding: '10px 24px',
-        backgroundColor: '#f0f0f0',
-        color: '#666',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: '14px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s',
-        ':hover': {
-            backgroundColor: '#e0e0e0'
-        }
-    }
-};
-
-// keyframes animation
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-    @keyframes modalIn {
-        from {
-            opacity: 0;
-            transform: scale(0.95) translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-        }
-    }
-    @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(28px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50%       { transform: translateY(-10px); }
-    }
-    .float-badge {
-        animation: float 3s ease-in-out infinite;
-    }
-    .float-badge-2 {
-        animation: float 3s ease-in-out infinite 1.5s;
-    }
-    .course-card {
-        transition: all 0.2s ease;
-    }
-    .course-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 18px rgba(0,0,0,0.1);
-    }
-    .search-input:focus {
-        border-color: #00b4b4 !important;
-        box-shadow: 0 0 0 3px rgba(0,180,180,0.14) !important;
-    }
-    .filter-select:focus {
-        border-color: #00b4b4 !important;
-        outline: none;
-    }
-    .category-chip:hover {
-        transform: scale(1.06);
-    }
-    input[type=range]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: #00b4b4;
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0,180,180,0.3);
-    }
-    input[type=range]::-moz-range-thumb {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: #00b4b4;
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0,180,180,0.3);
-        border: none;
-    }
-    .hero-btn-primary:hover {
-        background-color: #007a75 !important;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0,168,157,0.42) !important;
-    }
-    .hero-btn-secondary:hover {
-        background-color: #e0f7f6 !important;
-    }
-    ::-webkit-scrollbar {
-        width: 6px;
-    }
-    ::-webkit-scrollbar-track {
-        background: #f0f0f0;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: #00b4b4;
-        border-radius: 4px;
-    }
-`;
-document.head.appendChild(styleSheet);
 
 export default Enrollments;

@@ -201,7 +201,12 @@ const Header = () => {
 
                     {/* Footer */}
                     <div style={styles.notifFooter}>
-                      <button style={styles.notifViewAll}>View all notifications</button>
+                      <button style={styles.notifViewAll} onClick={() => {
+                        setNotifOpen(false);
+                        navigate('/notifications');
+                      }}>
+                        View all notifications
+                      </button>
                     </div>
 
                   </div>

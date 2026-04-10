@@ -1,7 +1,7 @@
 // src/services/notificationService.js
 import axios from 'axios';
 
-const NOTIFY_URL = process.env.REACT_APP_API_URL || 'http://localhost:3004';
+const NOTIFY_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export const getUserNotifications = async (email, token) => {
   const response = await axios.get(

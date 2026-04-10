@@ -14,10 +14,11 @@ app.use(helmet());
 // Restrict CORS to API Gateway and internal services only
 app.use(cors({
   origin: [
-    'http://localhost:3000',  // API Gateway — forwards all frontend requests
+    'http://localhost:5000',  // API Gateway — forwards all frontend requests
     'http://localhost:3002',  // Course Catalog Service — calls /validate
     'http://localhost:3003',  // Enrollment Service — calls /validate
     'http://localhost:3004',  // Notification Service — calls /validate
+    'http://localhost:3006',  // Payment Service — calls /validate
     process.env.FRONTEND_URL  // Production frontend URL from .env
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
