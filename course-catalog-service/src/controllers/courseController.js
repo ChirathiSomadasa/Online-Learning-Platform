@@ -12,7 +12,7 @@ const serviceToken = () =>
     { expiresIn: '1m' }
   );
 
-const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeRegex = (str) => str.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
 
 const sanitizeCourseBody = (body) => ({
   title:        body.title,

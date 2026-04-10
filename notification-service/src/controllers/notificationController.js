@@ -47,17 +47,16 @@ exports.sendNotification = async (req, res) => {
 
   try {
     if (req.body.to && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+      const subjectByType = {
+        welcome: 'Welcome to Online Learning Platform',
+        enrollment_confirmation: `Enrolled: ${req.body.courseTitle}`,
+        payment_confirmation: `Payment Confirmed: ${req.body.courseTitle} ${req.body.message}`,
+      }
+      const subject = subjectByType[req.body.type] || `New Course: ${req.body.courseTitle}`
       await getTransporter().sendMail({
         from: process.env.EMAIL_USER,
         to: req.body.to,
-        subject:
-          req.body.type === 'welcome'
-            ? 'Welcome to Online Learning Platform'
-            : req.body.type === 'enrollment_confirmation'
-              ? `Enrolled: ${req.body.courseTitle}`
-              : req.body.type === 'payment_confirmation'
-                ? `Payment Confirmed: ${req.body.courseTitle} ${req.body.message}`
-                : `New Course: ${req.body.courseTitle}`,
+        subject,
         html: buildHTML(req.body),
       })
     }

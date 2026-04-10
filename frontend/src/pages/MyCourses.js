@@ -174,14 +174,14 @@ const MyCourses = () => {
   useEffect(() => { fetchCourses(); }, []);
 
   const fetchCourses = async () => {
-  setLoading(true); setError('');
-  try {
-    const data = await getInstructorCourses(token);
-    setCourses(data);
-  } catch {
-    setError('Failed to load courses. Ensure the Course Catalog Service is running.');
-  } finally { setLoading(false); }
-};
+    setLoading(true); setError('');
+    try {
+      const data = await getInstructorCourses(token);
+      setCourses(data);
+    } catch {
+      setError('Failed to load courses. Ensure the Course Catalog Service is running.');
+    } finally { setLoading(false); }
+  };
 
   const pushToast = useCallback((msg, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -321,6 +321,13 @@ const MyCourses = () => {
   const requiredFields = ['title', 'description', 'instructor', 'category'];
   const filledCount = requiredFields.filter(f => form[f]?.trim().length > 0 && !validateField(f, form[f])).length;
   const progressPct = Math.round((filledCount / requiredFields.length) * 100);
+
+  // Instantly evaluate if the input name is different from the logged-in user's name (case-insensitive)
+  const showInstructorWarning = Boolean(
+    form.instructor && 
+    user?.name && 
+    form.instructor.trim().toLowerCase() !== user.name.trim().toLowerCase()
+  );
 
   return (
     <>
@@ -725,6 +732,16 @@ const MyCourses = () => {
                       <div data-field-error>
                         <FieldError msg={touched.instructor ? fieldErrors.instructor : ''} />
                       </div>
+                      
+                      {/* Dynamic Instantly Evaluating Warning */}
+                      {showInstructorWarning && (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: '#b87c00', lineHeight: '1.55', marginTop: '6px', animation: 'slideDown 0.2s ease' }}>
+                          <WarningAmberIcon style={{ fontSize: '14px', flexShrink: 0, marginTop: '2px' }} />
+                          <span>
+                            Display name will be <strong>{form.instructor.trim()}</strong>, but this course belongs to your account (<strong>{user.name}</strong>).
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div style={{ ...styles.formGroup, flex: 1 }}>
