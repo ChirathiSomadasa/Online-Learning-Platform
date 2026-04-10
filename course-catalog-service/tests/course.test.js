@@ -1,5 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
+const jwt = require('jsonwebtoken');
+const crypto = require('node:crypto');
 
 jest.mock('mongoose', () => {
   const actual = jest.requireActual('mongoose');
@@ -33,13 +35,12 @@ jest.mock('axios', () => ({
   post: jest.fn().mockResolvedValue({ data: { message: 'ok' } }),
 }));
 
-// Set a dummy secret for testing purposes
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'dummy_test_secret_12345'; 
-const jwt = require('jsonwebtoken');
+// Generate a random dynamic secret so SonarQube doesn't flag a hardcoded string
+process.env.JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 
 const validToken = jwt.sign(
   { id: 'user1', email: 'test@test.com', role: 'instructor', name: 'Dr. Silva' },
-  process.env.JWT_SECRET // Use the env variable
+  process.env.JWT_SECRET
 );
 
 describe('GET /health', () => {
